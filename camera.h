@@ -8,28 +8,40 @@
 
 namespace Tmpl8 {
 
-class Camera
-{
-public:
-	Camera()
-	{
-		// setup a basic view frustum
-		camPos = float3( 0, 0, -2 );
-		topLeft = float3( -aspect, 1, 0 );
-		topRight = float3( aspect, 1, 0 );
-		bottomLeft = float3( -aspect, -1, 0 );
-	}
-	Ray GetPrimaryRay( const int x, const int y )
-	{
-		// calculate pixel position on virtual screen plane
-		const float u = (float)x * (1.0f / SCRWIDTH);
-		const float v = (float)y * (1.0f / SCRHEIGHT);
-		const float3 P = topLeft + u * (topRight - topLeft) + v * (bottomLeft - topLeft);
-		return Ray( camPos, normalize( P - camPos ) );
-	}
-	float aspect = (float)SCRWIDTH / (float)SCRHEIGHT;
-	float3 camPos;
-	float3 topLeft, topRight, bottomLeft;
-};
+    class Camera {
+    public:
+        Camera() {
+            // setup a basic view frustum
+            camPos = float3( 0, 0, -2 );
+            topLeft = float3( -aspect, 1, 0 );
+            topRight = float3( aspect, 1, 0 );
+            bottomLeft = float3( -aspect, -1, 0 );
+        }
+
+        Ray GetPrimaryRay( const int x, const int y ) {
+            // calculate pixel position on virtual screen plane
+            const float u = (float) x * ( 1.0f / SCRWIDTH );
+            const float v = (float) y * ( 1.0f / SCRHEIGHT );
+            const float3 P = topLeft + u * ( topRight - topLeft ) + v * ( bottomLeft - topLeft );
+            return Ray( camPos, normalize( P - camPos ) );
+        }
+
+        void AdjustCamera( float yaw, float pitch, float roll, float xMove, float yMove, float zMove ) {
+            mat4 cameraMatrix = mat4::Translate( xMove * 0.1, yMove * 0.1, zMove * 0.1 );
+            cameraMatrix = cameraMatrix * mat4::Rotate(pitch, yaw, roll, 0.1);
+
+            mat4 camToWorld = mat4::Translate( -camPos);
+            mat4 worldToCam = mat4::Translate(camPos);
+
+            camPos = worldToCam.TransformPoint( cameraMatrix.TransformPoint( camToWorld.TransformPoint( camPos ) ) );
+            topLeft = worldToCam.TransformPoint( cameraMatrix.TransformPoint( camToWorld.TransformPoint( topLeft ) ) );
+            topRight = worldToCam.TransformPoint( cameraMatrix.TransformPoint( camToWorld.TransformPoint( topRight ) ) );
+            bottomLeft = worldToCam.TransformPoint( cameraMatrix.TransformPoint( camToWorld.TransformPoint( bottomLeft ) ) );
+        }
+
+        float aspect = (float) SCRWIDTH / (float) SCRHEIGHT;
+        float3 camPos;
+        float3 topLeft, topRight, bottomLeft;
+    };
 
 }
