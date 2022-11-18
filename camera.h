@@ -16,6 +16,7 @@ namespace Tmpl8 {
             topLeft = float3( -aspect, 1, 0 );
             topRight = float3( aspect, 1, 0 );
             bottomLeft = float3( -aspect, -1, 0 );
+            totalRotation = mat4::Identity();
         }
 
         Ray GetPrimaryRay( const int x, const int y ) {
@@ -27,13 +28,16 @@ namespace Tmpl8 {
         }
 
         void AdjustCamera( float yaw, float pitch, float roll, float xMove, float yMove, float zMove ) {
-            mat4 cameraMatrix = mat4::Translate( xMove * 0.1, yMove * 0.1, zMove * 0.1 );
-            cameraMatrix = cameraMatrix * mat4::Rotate(pitch, yaw, roll, 0.1);
+            mat4 rotation = mat4::Rotate( pitch, yaw, roll, 0.1 );
+            totalRotation = totalRotation * rotation;
+            float3 translation = totalRotation.TransformVector( 0.1 * float3( xMove, yMove, zMove ) );
+            mat4 cameraMatrix = rotation * mat4::Translate( translation );
 
             mat4 camToWorld = mat4::Translate( -camPos);
             mat4 worldToCam = mat4::Translate(camPos);
 
             camPos = worldToCam.TransformPoint( cameraMatrix.TransformPoint( camToWorld.TransformPoint( camPos ) ) );
+            printf("(%f, %f, %f)\n", camPos.x, camPos.y, camPos.z);
             topLeft = worldToCam.TransformPoint( cameraMatrix.TransformPoint( camToWorld.TransformPoint( topLeft ) ) );
             topRight = worldToCam.TransformPoint( cameraMatrix.TransformPoint( camToWorld.TransformPoint( topRight ) ) );
             bottomLeft = worldToCam.TransformPoint( cameraMatrix.TransformPoint( camToWorld.TransformPoint( bottomLeft ) ) );
@@ -42,6 +46,7 @@ namespace Tmpl8 {
         float aspect = (float) SCRWIDTH / (float) SCRHEIGHT;
         float3 camPos;
         float3 topLeft, topRight, bottomLeft;
+        mat4 totalRotation;
     };
 
 }
