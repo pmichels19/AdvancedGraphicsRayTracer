@@ -18,8 +18,8 @@ float3 Renderer::Trace( Ray& ray ) {
     float3 I = ray.O + ray.t * ray.D;
     float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
     float3 albedo = scene.GetAlbedo( ray.objIdx, I );
-    /* visualize normal */ return ( N + 1 ) * 0.5f;
-    /* visualize distance */ // return 0.1f * float3( ray.t, ray.t, ray.t );
+    /* visualize normal */ // return ( N + 1 ) * 0.5f;
+    /* visualize distance */ return 0.1f * float3( ray.t, ray.t, ray.t );
     /* visualize albedo */ // return albedo;
 }
 
@@ -30,6 +30,7 @@ void Renderer::Tick( float deltaTime ) {
     // animation
     static float animTime = 0;
     scene.SetTime( animTime += deltaTime * 0.002f );
+    // move the camera based on inputs given
     camera.AdjustCamera( yaw, pitch, roll, xMove, yMove, zMove );
     // pixel loop
     Timer t;
@@ -51,5 +52,5 @@ void Renderer::Tick( float deltaTime ) {
     avg = ( 1 - alpha ) * avg + alpha * t.elapsed() * 1000;
     if ( alpha > 0.05f ) alpha *= 0.5f;
     float fps = 1000 / avg, rps = ( SCRWIDTH * SCRHEIGHT ) * fps;
-    printf( "%5.2fms (%.1fps) - %.1fMrays/s\n", avg, fps, rps / 1000000 );
+    // printf( "%5.2fms (%.1fps) - %.1fMrays/s\n", avg, fps, rps / 1000000 );
 }

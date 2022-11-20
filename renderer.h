@@ -65,7 +65,6 @@ namespace Tmpl8 {
             // zMove
             if ( key == 87 ) zMove += 1; // w
             if ( key == 83 ) zMove -= 1; // s
-            printf("%d\n", key);
         }
 
         // data members
