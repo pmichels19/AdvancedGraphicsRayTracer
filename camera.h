@@ -9,6 +9,13 @@
 namespace Tmpl8 {
 
     class Camera {
+    private:
+        void applyMatrix(mat4 matrix) {
+            camPos      = matrix.TransformPoint( camPos );
+            topLeft     = matrix.TransformPoint( topLeft );
+            topRight    = matrix.TransformPoint( topRight );
+            bottomLeft  = matrix.TransformPoint( bottomLeft );
+        }
     public:
         Camera() {
             // setup a basic view frustum
@@ -16,6 +23,7 @@ namespace Tmpl8 {
             topLeft = float3( -aspect, 1, 0 );
             topRight = float3( aspect, 1, 0 );
             bottomLeft = float3( -aspect, -1, 0 );
+            camDirection = float3(0, 0, 1);
             totalRotation = mat4::Identity();
         }
 
@@ -28,24 +36,43 @@ namespace Tmpl8 {
         }
 
         void AdjustCamera( float yaw, float pitch, float roll, float xMove, float yMove, float zMove ) {
-            mat4 rotation = mat4::Rotate( pitch, yaw, roll, 0.1 );
+            // 1. undo translations so far done to camera
+            mat4 currTranslation = mat4::Translate( camPos );
+            mat4 undoTranslation = mat4::Translate( -camPos );
+            applyMatrix(undoTranslation);
+
+            // 2. undo rotations so far done to camera
+            mat4 undoRotation = totalRotation.Inverted();
+            applyMatrix(undoRotation);
+
+            // 3. build camera matrix and apply based on inputs
+            // new rotation(s)
+            mat4 rotation = mat4::Identity();
+            if ( abs( pitch ) > FLT_EPSILON ) rotation = rotation * mat4::RotateX( -pitch * 0.025 );
+            if ( abs( yaw ) > FLT_EPSILON ) rotation = rotation * mat4::RotateY( -yaw * 0.025 );
+            if ( abs( roll ) > FLT_EPSILON ) rotation = rotation * mat4::RotateZ( -roll * 0.025 );
+            // and translation(s)
+            mat4 cameraMatrix = mat4(rotation);
+            cameraMatrix( 0, 3 ) = 0.1 * xMove;
+            cameraMatrix( 1, 3 ) = 0.1 * yMove;
+            cameraMatrix( 2, 3 ) = 0.1 * zMove;
+            // apply
+            applyMatrix(cameraMatrix);
+
+            // 4. reset rotations already applied
+            applyMatrix(totalRotation);
+
+            // 5. reset translations already applied
+            applyMatrix(currTranslation);
+
+            // 6. update totalRotation
             totalRotation = totalRotation * rotation;
-            float3 translation = totalRotation.TransformVector( 0.1 * float3( xMove, yMove, zMove ) );
-            mat4 cameraMatrix = rotation * mat4::Translate( translation );
-
-            mat4 camToWorld = mat4::Translate( -camPos);
-            mat4 worldToCam = mat4::Translate(camPos);
-
-            camPos = worldToCam.TransformPoint( cameraMatrix.TransformPoint( camToWorld.TransformPoint( camPos ) ) );
-            printf("(%f, %f, %f)\n", camPos.x, camPos.y, camPos.z);
-            topLeft = worldToCam.TransformPoint( cameraMatrix.TransformPoint( camToWorld.TransformPoint( topLeft ) ) );
-            topRight = worldToCam.TransformPoint( cameraMatrix.TransformPoint( camToWorld.TransformPoint( topRight ) ) );
-            bottomLeft = worldToCam.TransformPoint( cameraMatrix.TransformPoint( camToWorld.TransformPoint( bottomLeft ) ) );
         }
 
         float aspect = (float) SCRWIDTH / (float) SCRHEIGHT;
         float3 camPos;
         float3 topLeft, topRight, bottomLeft;
+        float3 camDirection;
         mat4 totalRotation;
     };
 
