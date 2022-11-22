@@ -273,10 +273,12 @@ namespace Tmpl8 {
                 return;
             }
 
+            // we need u in [0, 1]
             float3 AO = ray.O - A;
             float u = dot( cross( -ray.D, AO ), AC ) / denom;
             if ( u < 0 || u > 1 ) return;
 
+            // same for v and (u + v)
             float v = dot( cross( -ray.D, AB ), AO ) / denom;
             if ( v < 0 || u + v > 1 ) return;
 
@@ -330,6 +332,34 @@ namespace Tmpl8 {
             // Note: once we have triangle support we should get rid of the class
             // hierarchy: virtuals reduce performance somewhat.
         }
+        Material GetMaterial( int objIdx ) {
+            switch ( objIdx ) {
+                case 0:
+                    return Material( float3( 1, 1, 1 ), 1, 0 );           // light panel
+                case 1:
+                    return Material( float3( 1, 1, 1 ), 0, 1 );           // bouncing ball
+                case 2:
+                    return Material( float3( 0, 1, 0 ), 1, 0 );           // rounded corners
+                case 3:
+                    return Material( float3( 0, 0, 1 ), 0, 1 );           // cube
+                case 4:
+                    return Material( float3( 1, 1, 0 ), 1, 0 );           // left wall
+                case 5:
+                    return Material( float3( 1, 1, 0 ), 1, 0 );           // right wall
+                case 6:
+                    return Material( float3( 0.5, 0.5, 0.5 ), 1, 0 );     // floor
+                case 7:
+                    return Material( float3( 0.5, 0.5, 0.5 ), 1, 0 );     // ceiling
+                case 8:
+                    return Material( float3( 0, 1, 1 ), 1, 0 );           // front wall
+                case 9:
+                    return Material( float3( 1, 0, 1 ), 1, 0 );           // back wall
+                case 10:
+                    return Material( float3( 0.75, 0.75, 0.75 ), 1, 0 );  // triangle
+                default:
+                    break;
+            }
+        }
         void SetTime( float t )
         {
             // default time for the scene is simply 0. Updating/ the time per frame 
@@ -356,7 +386,7 @@ namespace Tmpl8 {
         }
         float3 GetLightColor() const
         {
-            return float3( 24, 24, 22 );
+            return float3( 2.4, 2.4, 2.2 );
         }
         void FindNearest( Ray& ray ) const
         {
@@ -396,6 +426,7 @@ namespace Tmpl8 {
             else if ( objIdx == 1 ) N = sphere.GetNormal( I );
             else if ( objIdx == 2 ) N = sphere2.GetNormal( I );
             else if ( objIdx == 3 ) N = cube.GetNormal( I );
+            else if ( objIdx == 10 ) N = triangle.GetNormal( I );
             else
             {
                 // faster to handle the 6 planes without a call to GetNormal
@@ -412,6 +443,7 @@ namespace Tmpl8 {
             if ( objIdx == 1 ) return sphere.GetAlbedo( I );
             if ( objIdx == 2 ) return sphere2.GetAlbedo( I );
             if ( objIdx == 3 ) return cube.GetAlbedo( I );
+            else if ( objIdx == 10 ) return triangle.GetAlbedo( I );
             return plane[objIdx - 4].GetAlbedo( I );
             // once we have triangle support, we should pass objIdx and the bary-
             // centric coordinates of the hit, instead of the intersection location.

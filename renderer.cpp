@@ -12,15 +12,43 @@ void Renderer::Init() {
 // -----------------------------------------------------------
 // Evaluate light transport
 // -----------------------------------------------------------
-float3 Renderer::Trace( Ray& ray ) {
+float3 Renderer::Trace( Ray& ray, int depth ) {
+    float3 result = float3( 0, 0, 0 );
+    if ( depth == 0 ) {
+        return result;
+    }
+
     scene.FindNearest( ray );
     if ( ray.objIdx == -1 ) return 0; // or a fancy sky color
     float3 I = ray.O + ray.t * ray.D;
     float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
     float3 albedo = scene.GetAlbedo( ray.objIdx, I );
+    Material mat = scene.GetMaterial( ray.objIdx );
     /* visualize normal */ // return ( N + 1 ) * 0.5f;
-    /* visualize distance */ return 0.1f * float3( ray.t, ray.t, ray.t );
+    /* visualize distance */ // return 0.1f * float3( ray.t, ray.t, ray.t );
     /* visualize albedo */ // return albedo;
+    if ( mat.specular > FLT_EPSILON ) {
+        Ray reflectionRay = Ray( I, normalize( ray.D - 2 * dot( ray.D, N ) * N ) );
+        result = result + mat.specular * Trace( reflectionRay, depth - 1 );
+    }
+
+    if ( mat.diffuse > FLT_EPSILON ) {
+        result = result + mat.diffuse * DirectIllumination( I, N );
+    }
+
+    return mat.color * result;
+}
+
+float3 Renderer::DirectIllumination( float3 I, float3 N ) {
+    float3 intersectionToLight = scene.GetLightPos() - I;
+    float distance = length( intersectionToLight );
+    Ray toLight = Ray( I, normalize( intersectionToLight ), distance );
+
+    if ( scene.IsOccluded( toLight ) ) {
+        return float3( 0, 0, 0 );
+    }
+
+    return ( dot( toLight.D, N ) / (distance * distance) ) * scene.GetLightColor();
 }
 
 // -----------------------------------------------------------
