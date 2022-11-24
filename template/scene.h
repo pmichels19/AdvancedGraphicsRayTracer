@@ -74,7 +74,7 @@ namespace Tmpl8 {
             float t, d = b * b - c;
             if ( d <= 0 ) return;
             d = sqrtf( d ), t = -b - d;
-            if ( t < ray.t && t > 0 )
+            if ( t < ray.t && t > EPS )
             {
                 ray.t = t, ray.objIdx = objIdx;
                 return;
@@ -337,29 +337,29 @@ namespace Tmpl8 {
         Material GetMaterial( int objIdx ) {
             switch ( objIdx ) {
                 case 0:
-                    return Material( float3( 1, 1, 1 ), 1, 0 );           // light panel
+                    return Material( float3( 1, 1, 1 ), 1 );           // light panel
                 case 1:
-                    return Material( float3( 1, 1, 1 ), 0, 1 );           // bouncing ball
+                    return Material( float3( 1, 1, 1 ), 0 );           // bouncing ball
                 case 2:
-                    return Material( float3( 0, 1, 0 ), 1, 0 );           // rounded corners
+                    return Material( float3( 0, 1, 0 ), 1 );           // rounded corners
                 case 3:
-                    return Material( float3( 1, 1, 1 ), 0, 1 );           // cube
+                    return Material( float3( 1, 1, 1 ), 0.9 );           // cube
                 case 4:
-                    return Material( float3( 0.9, 0.9, 0.9 ), 1, 0 );     // left wall
+                    return Material( float3( 0.9, 0.9, 0.9 ), 1 );     // left wall
                 case 5:
-                    return Material( float3( 0.9, 0.9, 0.9 ), 1, 0 );     // right wall
+                    return Material( float3( 0.9, 0.9, 0.9 ), 1 );     // right wall
                 case 6:
-                    return Material( float3( 0.5, 0.5, 0.5 ), 1, 0 );     // floor
+                    return Material( float3( 0.5, 0.5, 0.5 ), 1 );     // floor
                 case 7:
-                    return Material( float3( 0.5, 0.5, 0.5 ), 1, 0 );     // ceiling
+                    return Material( float3( 0.5, 0.5, 0.5 ), 1 );     // ceiling
                 case 8:
-                    return Material( float3( 0.9, 0.9, 0.9 ), 1, 0 );     // front wall
+                    return Material( float3( 0.9, 0.9, 0.9 ), 1 );     // front wall
                 case 9:
-                    return Material( float3( 0.9, 0.9, 0.9 ), 1, 0 );     // back wall
+                    return Material( float3( 0.9, 0.9, 0.9 ), 1 );     // back wall
                 case 10:
-                    return Material( float3( 0.9, 0.1, 0.1 ), 1, 0 );  // triangle
+                    return Material( float3( 0.9, 0.1, 0.1 ), 1 );  // triangle
                 default:
-                    return Material( float3( 1, 1, 1 ), 1, 0 );
+                    return Material( float3( 1, 1, 1 ), 1 );
             }
         }
         void SetTime( float t )
