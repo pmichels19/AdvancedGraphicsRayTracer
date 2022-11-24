@@ -48,9 +48,9 @@ namespace Tmpl8 {
             // 3. build camera matrix and apply based on inputs
             // new rotation(s)
             mat4 rotation = mat4::Identity();
-            if ( abs( pitch ) > FLT_EPSILON ) rotation = rotation * mat4::RotateX( -pitch * 0.025 );
-            if ( abs( yaw ) > FLT_EPSILON ) rotation = rotation * mat4::RotateY( -yaw * 0.025 );
-            if ( abs( roll ) > FLT_EPSILON ) rotation = rotation * mat4::RotateZ( -roll * 0.025 );
+            if ( abs( pitch ) > FLT_EPSILON ) rotation = rotation * mat4::RotateX( -pitch * 0.05 );
+            if ( abs( yaw ) > FLT_EPSILON ) rotation = rotation * mat4::RotateY( -yaw * 0.05 );
+            if ( abs( roll ) > FLT_EPSILON ) rotation = rotation * mat4::RotateZ( -roll * 0.05 );
             // and translation(s)
             mat4 cameraMatrix = mat4(rotation);
             cameraMatrix( 0, 3 ) = 0.1 * xMove;

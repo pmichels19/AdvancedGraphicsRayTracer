@@ -44,11 +44,13 @@ float3 Renderer::DirectIllumination( float3 I, float3 N ) {
     float distance = length( intersectionToLight );
     Ray toLight = Ray( I, normalize( intersectionToLight ), distance );
 
-    if ( scene.IsOccluded( toLight ) ) {
+    float dotDN = dot( toLight.D, N );
+    // return black if no light source connects or if we are facing the occluded side of an object
+    if ( scene.IsOccluded( toLight ) || dotDN < 0 ) {
         return float3( 0, 0, 0 );
     }
 
-    return ( dot( toLight.D, N ) / (distance * distance) ) * scene.GetLightColor();
+    return ( dotDN / (distance * distance) ) * scene.GetLightColor();
 }
 
 // -----------------------------------------------------------

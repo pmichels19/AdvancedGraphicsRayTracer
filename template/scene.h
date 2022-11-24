@@ -24,6 +24,8 @@
 #define PLANE_Y(o,i) {if((t=-(ray.O.y+o)*ray.rD.y)<ray.t)ray.t=t,ray.objIdx=i;}
 #define PLANE_Z(o,i) {if((t=-(ray.O.z+o)*ray.rD.z)<ray.t)ray.t=t,ray.objIdx=i;}
 
+#define EPS 0.0001f
+
 namespace Tmpl8 {
 
     __declspec( align( 64 ) ) class Ray
@@ -78,7 +80,7 @@ namespace Tmpl8 {
                 return;
             }
             t = d - b;
-            if ( t < ray.t && t > 0 )
+            if ( t < ray.t && t > EPS )
             {
                 ray.t = t, ray.objIdx = objIdx;
                 return;
@@ -110,7 +112,7 @@ namespace Tmpl8 {
         void Intersect( Ray& ray ) const
         {
             float t = -( dot( ray.O, this->N ) + this->d ) / ( dot( ray.D, this->N ) );
-            if ( t < ray.t && t > 0 ) ray.t = t, ray.objIdx = objIdx;
+            if ( t < ray.t && t > EPS ) ray.t = t, ray.objIdx = objIdx;
         }
         float3 GetNormal( const float3 I ) const
         {
@@ -178,10 +180,10 @@ namespace Tmpl8 {
             float tzmax = ( b[1 - signz].z - O.z ) * rDz;
             if ( tmin > tzmax || tzmin > tmax ) return;
             tmin = max( tmin, tzmin ), tmax = min( tmax, tzmax );
-            if ( tmin > 0 )
+            if ( tmin > EPS )
             {
                 if ( tmin < ray.t ) ray.t = tmin, ray.objIdx = objIdx;
-            } else if ( tmax > 0 )
+            } else if ( tmax > EPS )
             {
                 if ( tmax < ray.t ) ray.t = tmax, ray.objIdx = objIdx;
             }
@@ -231,7 +233,7 @@ namespace Tmpl8 {
             const float3 O = TransformPosition( ray.O, invT );
             const float3 D = TransformVector( ray.D, invT );
             const float t = O.y / -D.y;
-            if ( t < ray.t && t > 0 )
+            if ( t < ray.t && t > EPS )
             {
                 float3 I = O + t * D;
                 if ( I.x > -size && I.x < size && I.z > -size && I.z < size )
@@ -260,7 +262,7 @@ namespace Tmpl8 {
             A = v0;
             B = v1;
             C = v2;
-            this->N = normalize( cross(B - A, C - A) );
+            this->N = normalize( cross(C - A, B - A) );
         }
 
         void Intersect( Ray& ray ) const {
@@ -283,7 +285,7 @@ namespace Tmpl8 {
             if ( v < 0 || u + v > 1 ) return;
 
             float t = dot(cross(AO, AB), AC) / denom;
-            if ( t < ray.t && t > 0 ) {
+            if ( t < ray.t && t > EPS ) {
                 ray.t = t;
                 ray.objIdx = objIdx;
             }
@@ -327,7 +329,7 @@ namespace Tmpl8 {
             plane[3] = Plane( 7, float3( 0, -1, 0 ), 2 );			// 7: ceiling
             plane[4] = Plane( 8, float3( 0, 0, 1 ), 3 );			// 8: front wall
             plane[5] = Plane( 9, float3( 0, 0, -1 ), 3.99f );		// 9: back wall
-            triangle = Triangle(10, float3( 0, 0.4, 1 ), float3( 0.2, 0.6, 1 ), float3( -0.2, 0.6, 1 ) ); // 10: triangle
+            triangle = Triangle(10, float3( 0, 0.25, 2.75 ), float3( 0.25, 0.75, 2.75 ), float3( -0.25, 0.75, 2.75 ) ); // 10: triangle
             SetTime( 0 );
             // Note: once we have triangle support we should get rid of the class
             // hierarchy: virtuals reduce performance somewhat.
@@ -341,23 +343,23 @@ namespace Tmpl8 {
                 case 2:
                     return Material( float3( 0, 1, 0 ), 1, 0 );           // rounded corners
                 case 3:
-                    return Material( float3( 0, 0, 1 ), 0, 1 );           // cube
+                    return Material( float3( 1, 1, 1 ), 0, 1 );           // cube
                 case 4:
-                    return Material( float3( 1, 1, 0 ), 1, 0 );           // left wall
+                    return Material( float3( 0.9, 0.9, 0.9 ), 1, 0 );     // left wall
                 case 5:
-                    return Material( float3( 1, 1, 0 ), 1, 0 );           // right wall
+                    return Material( float3( 0.9, 0.9, 0.9 ), 1, 0 );     // right wall
                 case 6:
                     return Material( float3( 0.5, 0.5, 0.5 ), 1, 0 );     // floor
                 case 7:
                     return Material( float3( 0.5, 0.5, 0.5 ), 1, 0 );     // ceiling
                 case 8:
-                    return Material( float3( 0, 1, 1 ), 1, 0 );           // front wall
+                    return Material( float3( 0.9, 0.9, 0.9 ), 1, 0 );     // front wall
                 case 9:
-                    return Material( float3( 1, 0, 1 ), 1, 0 );           // back wall
+                    return Material( float3( 0.9, 0.9, 0.9 ), 1, 0 );     // back wall
                 case 10:
-                    return Material( float3( 0.75, 0.75, 0.75 ), 1, 0 );  // triangle
+                    return Material( float3( 0.9, 0.1, 0.1 ), 1, 0 );  // triangle
                 default:
-                    break;
+                    return Material( float3( 1, 1, 1 ), 1, 0 );
             }
         }
         void SetTime( float t )
@@ -410,7 +412,7 @@ namespace Tmpl8 {
             sphere2.Intersect( ray );
             cube.Intersect( ray );
             triangle.Intersect( ray );
-            return ray.t < rayLength;
+            return ray.t < rayLength && ray.t > 0.001f; // final addition to compensate for floating point inaccuracy
             // technically this is wasteful: 
             // - we potentially search beyond rayLength
             // - we store objIdx and t when we just need a yes/no
