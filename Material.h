@@ -5,14 +5,8 @@ public:
     Material( float3 color, float diffuse ) {
         this->color = color;
 
-        if ( diffuse >= 0 - FLT_EPSILON && diffuse <= 1 + FLT_EPSILON ) {
-            this->diffuse = diffuse;
-        } else if ( diffuse < 0  ) {
-            this->diffuse = 0;
-        } else {
-            this->diffuse = 1;
-        }
-
+        // clamp diffuse in the interval [0, 1]
+        this->diffuse = fminf( 1, fmaxf( 0, diffuse ) );
         this->specular = 1.0f - this->diffuse;
     }
 
