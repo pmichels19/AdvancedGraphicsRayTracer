@@ -339,26 +339,27 @@ namespace Tmpl8 {
                 case 0:
                     return Material( float3( 1, 1, 1 ), 1 );           // light panel
                 case 1:
-                    return Material( float3( 1, 1, 1 ), 0 );           // bouncing ball
+                    return Material( float3( 1, 1, 1 ), 0, 1.52 );           // bouncing ball
                 case 2:
                     return Material( float3( 0, 1, 0 ), 1 );           // rounded corners
                 case 3:
                     return Material( float3( 1, 1, 1 ), 0.9 );           // cube
                 case 4:
-                    return Material( float3( 0.9, 0.9, 0.9 ), 1 );     // left wall
+                    return Material( float3( 1, 0, 0 ), 1 );     // left wall
                 case 5:
-                    return Material( float3( 0.9, 0.9, 0.9 ), 1 );     // right wall
+                    return Material( float3( 0, 0, 1 ), 1 );     // right wall
                 case 6:
-                    return Material( float3( 0.5, 0.5, 0.5 ), 1 );     // floor
+                    return Material( float3( 0.75, 0.75, 0.75 ), 1 );     // floor
                 case 7:
-                    return Material( float3( 0.5, 0.5, 0.5 ), 1 );     // ceiling
+                    return Material( float3( 0.25, 0.25, 0.25 ), 1 );     // ceiling
                 case 8:
-                    return Material( float3( 0.9, 0.9, 0.9 ), 1 );     // front wall
+                    return Material( float3( 1, 0, 1 ), 1 );     // front wall
                 case 9:
-                    return Material( float3( 0.9, 0.9, 0.9 ), 1 );     // back wall
+                    return Material( float3( 1, 1, 0 ), 1 );     // back wall
                 case 10:
-                    return Material( float3( 0.9, 0.1, 0.1 ), 1 );  // triangle
+                    return Material( float3( 0.9, 0.1, 0.1 ), 1 ); // triangle
                 default:
+                    printf("This should be unreachable - scene, getMaterial()\n");
                     return Material( float3( 1, 1, 1 ), 1 );
             }
         }

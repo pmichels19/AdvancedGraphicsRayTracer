@@ -13,7 +13,7 @@ void Renderer::Init() {
 // Evaluate light transport
 // -----------------------------------------------------------
 float3 Renderer::Trace( Ray& ray, int depth ) {
-    float3 result = float3( 0, 0, 0 );
+    float3 result = float3( 0 );
     if ( depth == 0 ) {
         return result;
     }
@@ -27,16 +27,66 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
     /* visualize normal */ // return ( N + 1 ) * 0.5f;
     /* visualize distance */ // return 0.1f * float3( ray.t, ray.t, ray.t );
     /* visualize albedo */ // return albedo;
-    if ( mat.specular > FLT_EPSILON ) {
-        Ray reflectionRay = Ray( I, normalize( ray.D - 2 * dot( ray.D, N ) * N ) );
-        result = result + mat.specular * Trace( reflectionRay, depth - 1 );
+    if ( mat.n < EPS ) {
+        // non-dielectric material, just do normal diffuse and specularity
+        if ( mat.specular > FLT_EPSILON ) {
+            Ray reflectionRay = Ray( I, normalize( reflect( ray.D, N ) ) );
+            result = result + mat.specular * Trace( reflectionRay, depth - 1 );
+        }
+
+        if ( mat.diffuse > FLT_EPSILON ) {
+            result = result + mat.diffuse * DirectIllumination( I, N );
+        }
+    } else {
+        float n1, n2;
+        float cosi = dot( N, ray.D );
+        //printf("%d\t\t(%f, %f, %f)\t\t(%f, %f, %f)\n", depth, I.x, I.y, I.z, N.x, N.y, N.z);
+
+        bool fromInside = ray.inside;
+        n1 = fromInside ? mat.n : 1;
+        n2 = fromInside ? 1 : mat.n;
+        float n1Divn2 = n1 / n2;
+
+        float k = 1 - sqrf( n1Divn2 ) * ( 1 - sqrf( cosi ) );
+
+        if ( k < 0 ) {
+            // handle Total Internal Reflection (TIR)
+            float3 R = normalize( reflect( ray.D, N ) );
+            Ray TIRRay = Ray(I, R);
+            TIRRay.inside = true;
+            result = result + Trace( TIRRay, depth - 1 );
+        } else {
+            float sini = length( cross( N, ray.D ) );
+            float cost = sqrtf( 1 - sqrf( n1Divn2 * sini ) );
+
+            float Fr = Fresnel(n1, n2, cost, -cosi );
+            float Ft = 1 - Fr;
+
+            // reflection
+            if ( Fr > FLT_EPSILON ) {
+                float3 R = normalize( reflect( ray.D, N ) );
+                Ray reflectionRay = Ray( I, R );
+                result = result + Fr * Trace( reflectionRay, depth - 1 );
+            }
+
+            // refraction
+            if ( Ft > FLT_EPSILON ) {
+                float3 T = normalize( n1Divn2 * ray.D - ( n1Divn2 + sqrtf( k ) ) * N );
+                Ray refractionRay = Ray( I, T );
+                refractionRay.inside = true;
+                result = result + Ft * Trace( refractionRay, depth - 1 );
+            }
+        }
+
+        if ( ray.inside ) {
+            result.x = result.x * exp( -mat.color.x * ray.t );
+            result.y = result.y * exp( -mat.color.y * ray.t );
+            result.z = result.z * exp( -mat.color.z * ray.t );
+        }
     }
 
-    if ( mat.diffuse > FLT_EPSILON ) {
-        result = result + mat.diffuse * DirectIllumination( I, N );
-    }
-
-    return mat.color * result;
+    //return mat.color * result;
+    return clamp( mat.color * result, 0, 1 );
 }
 
 float3 Renderer::DirectIllumination( float3 I, float3 N ) {
@@ -59,7 +109,7 @@ float3 Renderer::DirectIllumination( float3 I, float3 N ) {
 void Renderer::Tick( float deltaTime ) {
     // animation
     static float animTime = 0;
-    scene.SetTime( animTime += deltaTime * 0.002f );
+    // scene.SetTime( animTime += deltaTime * 0.002f );
     // move the camera based on inputs given
     camera.AdjustCamera( yaw, pitch, roll, xMove, yMove, zMove );
     // pixel loop

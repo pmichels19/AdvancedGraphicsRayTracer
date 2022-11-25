@@ -68,6 +68,14 @@ namespace Tmpl8 {
             if ( key == 83 ) zMove -= 1; // s
         }
 
+        float Fresnel( float n1, float n2, float cost, float cosi ) {
+            float sPolarized = ( n1 * cosi - n2 * cost ) / ( n1 * cosi + n2 * cost );
+            float pPolarized = ( n1 * cost - n2 * cosi ) / ( n1 * cost + n2 * cosi );
+            //printf("%f, %f\n", sPolarized, pPolarized);
+
+            return 0.5 * ( ( sPolarized * sPolarized ) + ( pPolarized * pPolarized ) );
+        }
+
         // data members
         int2 mousePos;
         float4* accumulator;
