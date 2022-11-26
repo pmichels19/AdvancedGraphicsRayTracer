@@ -6,7 +6,7 @@ namespace Tmpl8 {
     public:
         // game flow methods
         void Init();
-        float3 Trace( Ray& ray, int depth = 20 );
+        float3 Trace( Ray& ray, int depth = 5 );
         float3 DirectIllumination( float3 I, float3 N );
         void Tick( float deltaTime );
 
@@ -71,7 +71,6 @@ namespace Tmpl8 {
         float Fresnel( float n1, float n2, float cost, float cosi ) {
             float sPolarized = ( n1 * cosi - n2 * cost ) / ( n1 * cosi + n2 * cost );
             float pPolarized = ( n1 * cost - n2 * cosi ) / ( n1 * cost + n2 * cosi );
-            //printf("%f, %f\n", sPolarized, pPolarized);
 
             return 0.5 * ( ( sPolarized * sPolarized ) + ( pPolarized * pPolarized ) );
         }

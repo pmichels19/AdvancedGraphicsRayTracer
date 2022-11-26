@@ -339,7 +339,7 @@ namespace Tmpl8 {
                 case 0:
                     return Material( float3( 1, 1, 1 ), 1 );           // light panel
                 case 1:
-                    return Material( float3( 1, 1, 1 ), 0, 1.52 );           // bouncing ball
+                    return Material( float3( 0.2, 0.2, 1 ), 0, 1.52 );           // bouncing ball
                 case 2:
                     return Material( float3( 0, 1, 0 ), 1 );           // rounded corners
                 case 3:
@@ -389,7 +389,7 @@ namespace Tmpl8 {
         }
         float3 GetLightColor() const
         {
-            return float3( 2.4, 2.4, 2.2 );
+            return float3( 24, 24, 22 );
         }
         void FindNearest( Ray& ray ) const
         {
