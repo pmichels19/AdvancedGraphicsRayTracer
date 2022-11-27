@@ -42,6 +42,7 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
         float n2 = mat.n;
         float n1Divn2 = n1 / n2;
         float cosi = dot( N, ray.D );
+        if ( ray.inside ) n1Divn2 = 1 / n1Divn2;
 
         float k = 1 - ( n1Divn2 * n1Divn2 ) * ( 1 - ( cosi * cosi ) );
 
@@ -53,7 +54,6 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
             result += Trace( TIRRay, depth - 1 );
         } else {
             if ( ray.inside ) {
-                n1Divn2 = 1 / n1Divn2;
                 float3 T = normalize( n1Divn2 * ray.D - ( n1Divn2 + sqrtf( k ) ) * N );
                 Ray refractionRay = Ray( I, T );
                 refractionRay.inside = !ray.inside;
@@ -118,7 +118,7 @@ float3 Renderer::DirectIllumination( float3 I, float3 N ) {
 void Renderer::Tick( float deltaTime ) {
     // animation
     static float animTime = 0;
-    scene.SetTime( animTime += deltaTime * 0.002f );
+    //scene.SetTime( animTime += deltaTime * 0.002f );
     // move the camera based on inputs given
     camera.AdjustCamera( yaw, pitch, roll, xMove, yMove, zMove );
     // pixel loop
@@ -129,11 +129,11 @@ void Renderer::Tick( float deltaTime ) {
         // trace a primary ray for each pixel on the line
         for ( int x = 0; x < SCRWIDTH; x++ ) {
             float3 result = Trace( camera.GetPrimaryRay( x, y ) );
-            result += Trace( camera.GetPrimaryRay( x, y ) );
-            result += Trace( camera.GetPrimaryRay( x, y ) );
-            result += Trace( camera.GetPrimaryRay( x, y ) );
+            //result += Trace( camera.GetPrimaryRay( x, y ) );
+            //result += Trace( camera.GetPrimaryRay( x, y ) );
+            //result += Trace( camera.GetPrimaryRay( x, y ) );
 
-            accumulator[x + y * SCRWIDTH] = float4( 0.25 * result, 0 );
+            accumulator[x + y * SCRWIDTH] = float4( result, 0 );
         }
 
         // translate accumulator contents to rgb32 pixels

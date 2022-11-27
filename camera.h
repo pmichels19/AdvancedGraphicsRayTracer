@@ -30,9 +30,9 @@ namespace Tmpl8 {
         }
     public:
         Camera() {
-            aperture = 0.1;
+            aperture = 0.0001;
             lensRadius = aperture / 2.0f;
-            focusDistance = 2;
+            focusDistance = 1;
 
             // setup a basic view frustum
             camPos = float3( 0, 0, -2 );
