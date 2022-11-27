@@ -339,11 +339,11 @@ namespace Tmpl8 {
                 case 0:
                     return Material( float3( 1, 1, 1 ), 1 );           // light panel
                 case 1:
-                    return Material( float3( 0.2, 0.2, 1 ), 0 );           // bouncing ball
+                    return Material( float3( 0.2, 0.5, 0.9 ), 0, 1.52 );           // bouncing ball
                 case 2:
                     return Material( float3( 0, 1, 0 ), 1 );           // rounded corners
                 case 3:
-                    return Material( float3( 0.9, 0.9, 0.9 ), 0, 1.52 );           // cube
+                    return Material( float3( 0.2, 1, 1 ), 0.9 );           // cube
                 case 4:
                     return Material( float3( 1, 0, 0 ), 1 );     // left wall
                 case 5:

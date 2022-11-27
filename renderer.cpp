@@ -118,7 +118,6 @@ float3 Renderer::DirectIllumination( float3 I, float3 N ) {
 void Renderer::Tick( float deltaTime ) {
     // animation
     static float animTime = 0;
-    //scene.SetTime( animTime += deltaTime * 0.002f );
     // move the camera based on inputs given
     camera.AdjustCamera( yaw, pitch, roll, xMove, yMove, zMove );
     // pixel loop
@@ -128,6 +127,7 @@ void Renderer::Tick( float deltaTime ) {
     for ( int y = 0; y < SCRHEIGHT; y++ ) {
         // trace a primary ray for each pixel on the line
         for ( int x = 0; x < SCRWIDTH; x++ ) {
+            scene.SetTime( animTime + Rand( deltaTime * 0.002f ) );
             float3 result = Trace( camera.GetPrimaryRay( x, y ) );
             //result += Trace( camera.GetPrimaryRay( x, y ) );
             //result += Trace( camera.GetPrimaryRay( x, y ) );
@@ -141,6 +141,8 @@ void Renderer::Tick( float deltaTime ) {
             screen->pixels[dest + x] = RGBF32_to_RGB8( &accumulator[x + y * SCRWIDTH] );
         }
     }
+
+    scene.SetTime( animTime += deltaTime * 0.002f );
     // performance report - running average - ms, MRays/s
     static float avg = 10, alpha = 1;
     avg = ( 1 - alpha ) * avg + alpha * t.elapsed() * 1000;
