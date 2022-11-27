@@ -6,7 +6,7 @@ namespace Tmpl8 {
     public:
         // game flow methods
         void Init();
-        float3 Trace( Ray& ray, int depth = 5 );
+        float3 Trace( Ray& ray, int depth = 10 );
         float3 DirectIllumination( float3 I, float3 N );
         void Tick( float deltaTime );
 

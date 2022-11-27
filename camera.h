@@ -16,6 +16,18 @@ namespace Tmpl8 {
             topRight    = matrix.TransformPoint( topRight );
             bottomLeft  = matrix.TransformPoint( bottomLeft );
         }
+
+        float random_float( const float min, const float max ) {
+            return min + ( max - min ) * rand() / ( RAND_MAX + 1.0f );
+        }
+
+        float3 randomInUnitDisk() {
+            while ( true ) {
+                float3 p = float3( random_float( -1, 1 ), random_float( -1, 1 ), 0 );
+                if ( sqrLength( p ) >= 1 ) continue;
+                return p;
+            }
+        }
     public:
         Camera() {
             // setup a basic view frustum
@@ -29,8 +41,8 @@ namespace Tmpl8 {
 
         Ray GetPrimaryRay( const int x, const int y ) {
             // calculate pixel position on virtual screen plane
-            const float u = (float) x * ( 1.0f / SCRWIDTH );
-            const float v = (float) y * ( 1.0f / SCRHEIGHT );
+            const float u = (float) x * ( 1.0f / SCRWIDTH ) + random_float( 0, ( 1.0f / SCRWIDTH ) );
+            const float v = (float) y * ( 1.0f / SCRHEIGHT ) + random_float( 0, ( 1.0f / SCRHEIGHT ) );
             const float3 P = topLeft + u * ( topRight - topLeft ) + v * ( bottomLeft - topLeft );
             return Ray( camPos, normalize( P - camPos ) );
         }

@@ -22,7 +22,7 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
     if ( ray.objIdx == -1 ) return 0; // or a fancy sky color
     float3 I = ray.O + ray.t * ray.D;
     float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
-    float3 albedo = scene.GetAlbedo( ray.objIdx, I );
+    // float3 albedo = scene.GetAlbedo( ray.objIdx, I );
     Material mat = scene.GetMaterial( ray.objIdx );
     /* visualize normal */ // return ( N + 1 ) * 0.5f;
     /* visualize distance */ // return 0.1f * float3( ray.t, ray.t, ray.t );
@@ -31,11 +31,11 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
         // non-dielectric material, just do normal diffuse and specularity
         if ( mat.specular > FLT_EPSILON ) {
             Ray reflectionRay = Ray( I, normalize( reflect( ray.D, N ) ) );
-            result = result + mat.specular * Trace( reflectionRay, depth - 1 );
+            result += mat.specular * Trace( reflectionRay, depth - 1 );
         }
 
         if ( mat.diffuse > FLT_EPSILON ) {
-            result = result + mat.diffuse * DirectIllumination( I, N );
+            result += mat.diffuse * DirectIllumination( I, N );
         }
     } else {
         float n1 = 1;
@@ -43,21 +43,21 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
         float n1Divn2 = n1 / n2;
         float cosi = dot( N, ray.D );
 
-        float k = 1 - sqrf( n1Divn2 ) * ( 1 - sqrf( cosi ) );
+        float k = 1 - ( n1Divn2 * n1Divn2 ) * ( 1 - ( cosi * cosi ) );
 
         if ( k < 0 ) {
             // handle Total Internal Reflection (TIR)
             float3 R = normalize( reflect( ray.D, N ) );
             Ray TIRRay = Ray(I, R);
             TIRRay.inside = true;
-            result = result + Trace( TIRRay, depth - 1 );
+            result += Trace( TIRRay, depth - 1 );
         } else {
             if ( ray.inside ) {
                 n1Divn2 = 1 / n1Divn2;
                 float3 T = normalize( n1Divn2 * ray.D - ( n1Divn2 + sqrtf( k ) ) * N );
                 Ray refractionRay = Ray( I, T );
                 refractionRay.inside = !ray.inside;
-                result = result + Trace( refractionRay, depth - 1 );
+                result += Trace( refractionRay, depth - 1 );
             }
 
             float sini = length( cross( N, ray.D ) );
@@ -70,7 +70,7 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
             if ( Fr > FLT_EPSILON ) {
                 float3 R = normalize( reflect( ray.D, N ) );
                 Ray reflectionRay = Ray( I, R );
-                result = result + Fr * Trace( reflectionRay, depth - 1 );
+                result += Fr * Trace( reflectionRay, depth - 1 );
             }
 
             // refraction
@@ -78,10 +78,11 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
                 float3 T = normalize( n1Divn2 * ray.D - ( n1Divn2 + sqrtf( k ) ) * N );
                 Ray refractionRay = Ray( I, T );
                 refractionRay.inside = !ray.inside;
-                result = result + Ft * Trace( refractionRay, depth - 1 );
+                result += Ft * Trace( refractionRay, depth - 1 );
             }
         }
 
+        // Beer's law, use the color as absorbance instead of the actual color
         if ( ray.inside ) {
             result.x = result.x * exp( -mat.color.x * ray.t );
             result.y = result.y * exp( -mat.color.y * ray.t );
@@ -96,11 +97,15 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
 float3 Renderer::DirectIllumination( float3 I, float3 N ) {
     float3 intersectionToLight = scene.GetLightPos() - I;
     float distance = length( intersectionToLight );
-    Ray toLight = Ray( I, normalize( intersectionToLight ), distance );
+    intersectionToLight = normalize( intersectionToLight );
+    float dotDN = dot( intersectionToLight, N );
 
-    float dotDN = dot( toLight.D, N );
+    if ( dotDN < 0 ) return float3( 0 );
+
+    Ray toLight = Ray( I, intersectionToLight, distance );
+
     // return black if no light source connects or if we are facing the occluded side of an object
-    if ( scene.IsOccluded( toLight ) || dotDN < 0 ) {
+    if ( scene.IsOccluded( toLight ) ) {
         return float3( 0, 0, 0 );
     }
 
@@ -123,7 +128,12 @@ void Renderer::Tick( float deltaTime ) {
     for ( int y = 0; y < SCRHEIGHT; y++ ) {
         // trace a primary ray for each pixel on the line
         for ( int x = 0; x < SCRWIDTH; x++ ) {
-            accumulator[x + y * SCRWIDTH] = float4( Trace( camera.GetPrimaryRay( x, y ) ), 0 );
+            float3 result = Trace( camera.GetPrimaryRay( x, y ) );
+            result += Trace( camera.GetPrimaryRay( x, y ) );
+            result += Trace( camera.GetPrimaryRay( x, y ) );
+            result += Trace( camera.GetPrimaryRay( x, y ) );
+
+            accumulator[x + y * SCRWIDTH] = float4( 0.25 * result, 0 );
         }
 
         // translate accumulator contents to rgb32 pixels
