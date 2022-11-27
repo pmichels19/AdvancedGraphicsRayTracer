@@ -30,12 +30,15 @@ namespace Tmpl8 {
         }
     public:
         Camera() {
+            aperture = 0.1;
+            lensRadius = aperture / 2.0f;
+            focusDistance = 2;
+
             // setup a basic view frustum
             camPos = float3( 0, 0, -2 );
-            topLeft = float3( -aspect, 1, 0 );
-            topRight = float3( aspect, 1, 0 );
-            bottomLeft = float3( -aspect, -1, 0 );
-            camDirection = float3(0, 0, 1);
+            topLeft = focusDistance * float3( -aspect, 1, 0 );
+            topRight = focusDistance * float3( aspect, 1, 0 );
+            bottomLeft = focusDistance * float3( -aspect, -1, 0 );
             totalRotation = mat4::Identity();
         }
 
@@ -43,8 +46,11 @@ namespace Tmpl8 {
             // calculate pixel position on virtual screen plane
             const float u = (float) x * ( 1.0f / SCRWIDTH ) + random_float( 0, ( 1.0f / SCRWIDTH ) );
             const float v = (float) y * ( 1.0f / SCRHEIGHT ) + random_float( 0, ( 1.0f / SCRHEIGHT ) );
+
+            float3 rd = lensRadius * randomInUnitDisk();
+            const float3 offset = float3( u * rd.x, v * rd.y, 0 );
             const float3 P = topLeft + u * ( topRight - topLeft ) + v * ( bottomLeft - topLeft );
-            return Ray( camPos, normalize( P - camPos ) );
+            return Ray( camPos + offset, normalize( P - camPos - offset ) );
         }
 
         void AdjustCamera( float yaw, float pitch, float roll, float xMove, float yMove, float zMove ) {
@@ -81,10 +87,14 @@ namespace Tmpl8 {
             totalRotation = totalRotation * rotation;
         }
 
+        // DOF stuff
+        float aperture;
+        float focusDistance;
+        float lensRadius;
+
         float aspect = (float) SCRWIDTH / (float) SCRHEIGHT;
         float3 camPos;
         float3 topLeft, topRight, bottomLeft;
-        float3 camDirection;
         mat4 totalRotation;
     };
 
