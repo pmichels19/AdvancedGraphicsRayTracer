@@ -50,20 +50,17 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
             // handle Total Internal Reflection (TIR)
             float3 R = normalize( reflect( ray.D, N ) );
             Ray TIRRay = Ray(I, R);
-            TIRRay.inside = ray.objIdx == 1 || ray.objIdx == 3;
+            TIRRay.inside = true;
             result += Trace( TIRRay, depth - 1 );
         } else {
-            if ( ray.inside ) {
-                float3 T = normalize( n1Divn2 * ray.D + ( n1Divn2 - sqrtf( k ) ) * N );
-                Ray refractionRay = Ray( I, T );
-                refractionRay.inside = !ray.inside;
-                result += Trace( refractionRay, depth - 1 );
+            float Fr = 0;
+            if ( !ray.inside ) {
+                float sini = length( cross( N, ray.D ) );
+                float cost = sqrtf( 1 - sqrf( n1Divn2 * sini ) );
+
+                float Fr = Fresnel( n1, n2, cost, -cosi );
             }
 
-            float sini = length( cross( N, ray.D ) );
-            float cost = sqrtf( 1 - sqrf( n1Divn2 * sini ) );
-
-            float Fr = Fresnel( n1, n2, cost, -cosi );
             float Ft = 1 - Fr;
 
             // reflection

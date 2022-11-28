@@ -320,7 +320,7 @@ namespace Tmpl8 {
         {
             // we store all primitives in one continuous buffer
             quad = Quad( 0, 1 );									// 0: light source
-            sphere = Sphere( 1, float3( 0 ), 0.5f );				// 1: bouncing ball
+            sphere = Sphere( 1, float3( 0 ), -0.5f );				// 1: bouncing ball
             sphere2 = Sphere( 2, float3( 0, 2.5f, -3.07f ), 8 );	// 2: rounded corners
             cube = Cube( 3, float3( 0 ), float3( 1.15f ) );			// 3: cube
             plane[0] = Plane( 4, float3( 1, 0, 0 ), 3 );			// 4: left wall
@@ -339,11 +339,11 @@ namespace Tmpl8 {
                 case 0:
                     return Material( float3( 1, 1, 1 ), 1 );           // light panel
                 case 1:
-                    return Material( float3( 1, 0.2, 0.1 ), 0, 1.52 );           // bouncing ball
+                    return Material( float3( 8, 2, 0.1 ), 0, 1.52 );           // bouncing ball
                 case 2:
                     return Material( float3( 0, 1, 0 ), 1 );           // rounded corners
                 case 3:
-                    return Material( float3( 0.2, 1, 1 ), 0.9, 2.42 );           // cube
+                    return Material( float3( 8, 2, 0.1 ), 0.9, 2.42 );           // cube
                 case 4:
                     return Material( float3( 1, 0, 0 ), 1 );     // left wall
                 case 5:
@@ -357,7 +357,7 @@ namespace Tmpl8 {
                 case 9:
                     return Material( float3( 1, 1, 0 ), 1 );     // back wall
                 case 10:
-                    return Material( float3( 0.9, 0.9, 0.9 ), 1, 1.52 ); // triangle
+                    return Material( float3( 0.9, 0.9, 0.9 ), 1 ); // triangle
                 default:
                     printf("This should be unreachable - scene, getMaterial()\n");
                     return Material( float3( 1, 1, 1 ), 1 );

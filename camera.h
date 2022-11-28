@@ -30,7 +30,7 @@ namespace Tmpl8 {
         }
     public:
         Camera() {
-            aperture = 0.0001;
+            aperture = 0.01;
             lensRadius = aperture / 2.0f;
             focusDistance = 1;
 
@@ -66,9 +66,9 @@ namespace Tmpl8 {
             // 3. build camera matrix and apply based on inputs
             // new rotation(s)
             mat4 rotation = mat4::Identity();
-            if ( abs( pitch ) > FLT_EPSILON ) rotation = rotation * mat4::RotateX( -pitch * 0.05 );
-            if ( abs( yaw ) > FLT_EPSILON ) rotation = rotation * mat4::RotateY( -yaw * 0.05 );
-            if ( abs( roll ) > FLT_EPSILON ) rotation = rotation * mat4::RotateZ( -roll * 0.05 );
+            if ( abs( pitch ) > FLT_EPSILON ) rotation = rotation * mat4::RotateX( -pitch * 0.1 );
+            if ( abs( yaw ) > FLT_EPSILON ) rotation = rotation * mat4::RotateY( -yaw * 0.1 );
+            if ( abs( roll ) > FLT_EPSILON ) rotation = rotation * mat4::RotateZ( -roll * 0.1 );
             // and translation(s)
             mat4 cameraMatrix = mat4(rotation);
             cameraMatrix( 0, 3 ) = 0.1 * xMove;
