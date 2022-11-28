@@ -329,21 +329,21 @@ namespace Tmpl8 {
             plane[3] = Plane( 7, float3( 0, -1, 0 ), 2 );			// 7: ceiling
             plane[4] = Plane( 8, float3( 0, 0, 1 ), 3 );			// 8: front wall
             plane[5] = Plane( 9, float3( 0, 0, -1 ), 3.99f );		// 9: back wall
-            triangle = Triangle(10, float3( 0, 0.25, 2.75 ), float3( 0.25, 0.75, 2.75 ), float3( -0.25, 0.75, 2.75 ) ); // 10: triangle
+            triangle = Triangle(10, float3( 0, 0, 1 ), float3( 0.5, 1, 1 ), float3( -0.5, 1, 1 ) ); // 10: triangle
             SetTime( 0 );
             // Note: once we have triangle support we should get rid of the class
             // hierarchy: virtuals reduce performance somewhat.
         }
-        Material GetMaterial( int objIdx ) {
+        Material GetMaterial( int objIdx, float3 I = float3( 0 ) ) {
             switch ( objIdx ) {
                 case 0:
                     return Material( float3( 1, 1, 1 ), 1 );           // light panel
                 case 1:
-                    return Material( float3( 0.2, 0.5, 0.9 ), 0, 1.52 );           // bouncing ball
+                    return Material( float3( 1, 0.2, 0.1 ), 0, 1.52 );           // bouncing ball
                 case 2:
                     return Material( float3( 0, 1, 0 ), 1 );           // rounded corners
                 case 3:
-                    return Material( float3( 0.2, 1, 1 ), 0.9 );           // cube
+                    return Material( float3( 0.2, 1, 1 ), 0.9, 2.42 );           // cube
                 case 4:
                     return Material( float3( 1, 0, 0 ), 1 );     // left wall
                 case 5:
@@ -357,7 +357,7 @@ namespace Tmpl8 {
                 case 9:
                     return Material( float3( 1, 1, 0 ), 1 );     // back wall
                 case 10:
-                    return Material( float3( 0.9, 0.1, 0.1 ), 1 ); // triangle
+                    return Material( float3( 0.9, 0.9, 0.9 ), 1, 1.52 ); // triangle
                 default:
                     printf("This should be unreachable - scene, getMaterial()\n");
                     return Material( float3( 1, 1, 1 ), 1 );

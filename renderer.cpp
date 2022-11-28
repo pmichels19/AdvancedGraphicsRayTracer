@@ -15,7 +15,7 @@ void Renderer::Init() {
 float3 Renderer::Trace( Ray& ray, int depth ) {
     float3 result = float3( 0 );
     if ( depth == 0 ) {
-        return result;
+        return 0;
     }
 
     scene.FindNearest( ray );
@@ -50,11 +50,11 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
             // handle Total Internal Reflection (TIR)
             float3 R = normalize( reflect( ray.D, N ) );
             Ray TIRRay = Ray(I, R);
-            TIRRay.inside = true;
+            TIRRay.inside = ray.objIdx == 1 || ray.objIdx == 3;
             result += Trace( TIRRay, depth - 1 );
         } else {
             if ( ray.inside ) {
-                float3 T = normalize( n1Divn2 * ray.D - ( n1Divn2 + sqrtf( k ) ) * N );
+                float3 T = normalize( n1Divn2 * ray.D + ( n1Divn2 - sqrtf( k ) ) * N );
                 Ray refractionRay = Ray( I, T );
                 refractionRay.inside = !ray.inside;
                 result += Trace( refractionRay, depth - 1 );
@@ -75,9 +75,9 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
 
             // refraction
             if ( Ft > FLT_EPSILON ) {
-                float3 T = normalize( n1Divn2 * ray.D - ( n1Divn2 + sqrtf( k ) ) * N );
+                float3 T = normalize( n1Divn2 * ray.D - ( n1Divn2 * cosi + sqrtf( k ) ) * N );
                 Ray refractionRay = Ray( I, T );
-                refractionRay.inside = !ray.inside;
+                refractionRay.inside = !ray.inside && ray.objIdx == 1 || ray.objIdx == 3;
                 result += Ft * Trace( refractionRay, depth - 1 );
             }
         }
@@ -88,9 +88,14 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
             result.y = result.y * exp( -mat.color.y * ray.t );
             result.z = result.z * exp( -mat.color.z * ray.t );
         }
+
+        return result;
     }
 
     //return mat.color * result;
+    if ( ray.objIdx == 9 ) {
+        return scene.GetAlbedo(9, I) * result;
+    }
     return mat.color * result;
 }
 
@@ -127,7 +132,7 @@ void Renderer::Tick( float deltaTime ) {
     for ( int y = 0; y < SCRHEIGHT; y++ ) {
         // trace a primary ray for each pixel on the line
         for ( int x = 0; x < SCRWIDTH; x++ ) {
-            scene.SetTime( animTime + Rand( deltaTime * 0.002f ) );
+            //scene.SetTime( animTime + Rand( deltaTime * 0.002f ) );
             float3 result = Trace( camera.GetPrimaryRay( x, y ) );
             //result += Trace( camera.GetPrimaryRay( x, y ) );
             //result += Trace( camera.GetPrimaryRay( x, y ) );
@@ -142,7 +147,7 @@ void Renderer::Tick( float deltaTime ) {
         }
     }
 
-    scene.SetTime( animTime += deltaTime * 0.002f );
+    //scene.SetTime( animTime += deltaTime * 0.002f );
     // performance report - running average - ms, MRays/s
     static float avg = 10, alpha = 1;
     avg = ( 1 - alpha ) * avg + alpha * t.elapsed() * 1000;
