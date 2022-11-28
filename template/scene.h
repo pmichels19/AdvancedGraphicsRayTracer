@@ -320,7 +320,7 @@ namespace Tmpl8 {
         {
             // we store all primitives in one continuous buffer
             quad = Quad( 0, 1 );									// 0: light source
-            sphere = Sphere( 1, float3( 0 ), -0.5f );				// 1: bouncing ball
+            sphere = Sphere( 1, float3( 0 ), 0.5f );				// 1: bouncing ball
             sphere2 = Sphere( 2, float3( 0, 2.5f, -3.07f ), 8 );	// 2: rounded corners
             cube = Cube( 3, float3( 0 ), float3( 1.15f ) );			// 3: cube
             plane[0] = Plane( 4, float3( 1, 0, 0 ), 3 );			// 4: left wall
