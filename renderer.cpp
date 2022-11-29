@@ -74,7 +74,7 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
             if ( Ft > FLT_EPSILON ) {
                 float3 T = normalize( n1Divn2 * ray.D - ( n1Divn2 * cosi + sqrtf( k ) ) * N );
                 Ray refractionRay = Ray( I, T );
-                refractionRay.inside = !ray.inside && ray.objIdx == 1 || ray.objIdx == 3;
+                refractionRay.inside = !ray.inside; // TODO: only when hitting object with volume, maybe material property?
                 result += Ft * Trace( refractionRay, depth - 1 );
             }
         }
@@ -97,21 +97,28 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
 }
 
 float3 Renderer::DirectIllumination( float3 I, float3 N ) {
-    float3 intersectionToLight = scene.GetLightPos() - I;
-    float distance = length( intersectionToLight );
-    intersectionToLight = normalize( intersectionToLight );
-    float dotDN = dot( intersectionToLight, N );
+    float3 result = float3( 0 );
+    int samples = 0;
+    for (samples; samples < 4; samples++) {
+        float3 intersectionToLight = scene.GetLightPos() - I;
+        float distance = length(intersectionToLight);
+        intersectionToLight /= distance;
+        float dotDN = dot(intersectionToLight, N);
 
-    if ( dotDN < 0 ) return float3( 0 );
+        if (dotDN < 0) {
+            continue;
+        }
 
-    Ray toLight = Ray( I, intersectionToLight, distance );
+        Ray toLight = Ray(I, intersectionToLight, distance - 2 * EPS);
+        // return black if no light source connects or if we are facing the occluded side of an object
+        if (scene.IsOccluded(toLight)) {
+            continue;
+        }
 
-    // return black if no light source connects or if we are facing the occluded side of an object
-    if ( scene.IsOccluded( toLight ) ) {
-        return float3( 0, 0, 0 );
+        result += (dotDN / (distance * distance)) * scene.GetLightColor();
     }
 
-    return ( dotDN / (distance * distance) ) * scene.GetLightColor();
+    return result / (float) samples;
 }
 
 // -----------------------------------------------------------
@@ -121,7 +128,15 @@ void Renderer::Tick( float deltaTime ) {
     // animation
     static float animTime = 0;
     // move the camera based on inputs given
-    camera.AdjustCamera( yaw, pitch, roll, xMove, yMove, zMove );
+    bool stationary = abs(yaw) < FLT_EPSILON && abs(pitch) < FLT_EPSILON && abs(roll) < FLT_EPSILON 
+        && abs(xMove) < FLT_EPSILON && abs(yMove) < FLT_EPSILON && abs(zMove) < FLT_EPSILON;
+    if (!stationary) {
+        stationaryFrames = 0;
+        camera.AdjustCamera(yaw, pitch, roll, xMove, yMove, zMove);
+    }
+
+    stationaryFrames++;
+    float accCount = ( stationaryFrames - 1.0f ) / stationaryFrames;
     // pixel loop
     Timer t;
     // lines are executed as OpenMP parallel tasks (disabled in DEBUG)
@@ -135,7 +150,7 @@ void Renderer::Tick( float deltaTime ) {
             //result += Trace( camera.GetPrimaryRay( x, y ) );
             //result += Trace( camera.GetPrimaryRay( x, y ) );
 
-            accumulator[x + y * SCRWIDTH] = float4( result, 0 );
+            accumulator[x + y * SCRWIDTH] = accCount * accumulator[x + y * SCRWIDTH] + ( 1 - accCount ) * float4( result, 0 );
         }
 
         // translate accumulator contents to rgb32 pixels

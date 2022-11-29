@@ -30,15 +30,15 @@ namespace Tmpl8 {
         }
     public:
         Camera() {
-            aperture = 0.01;
+            aperture = 0.05;
             lensRadius = aperture / 2.0f;
             focusDistance = 1;
 
             // setup a basic view frustum
             camPos = float3( 0, 0, -2 );
-            topLeft = focusDistance * float3( -aspect, 1, 0 );
-            topRight = focusDistance * float3( aspect, 1, 0 );
-            bottomLeft = focusDistance * float3( -aspect, -1, 0 );
+            topLeft = camPos + focusDistance * float3( -aspect, 1, 2);
+            topRight = camPos + focusDistance * float3( aspect, 1, 2);
+            bottomLeft = camPos + focusDistance * float3( -aspect, -1, 2 );
             totalRotation = mat4::Identity();
         }
 

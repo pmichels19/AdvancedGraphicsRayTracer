@@ -334,16 +334,16 @@ namespace Tmpl8 {
             // Note: once we have triangle support we should get rid of the class
             // hierarchy: virtuals reduce performance somewhat.
         }
-        Material GetMaterial( int objIdx, float3 I = float3( 0 ) ) {
+        Material GetMaterial( int objIdx ) {
             switch ( objIdx ) {
                 case 0:
                     return Material( float3( 1, 1, 1 ), 1 );           // light panel
                 case 1:
-                    return Material( float3( 8, 2, 0.1 ), 0, 1.52 );           // bouncing ball
+                    return Material( float3( 0.5, 0.5, 0.5 ), 0, 1.52 );           // bouncing ball
                 case 2:
                     return Material( float3( 0, 1, 0 ), 1 );           // rounded corners
                 case 3:
-                    return Material( float3( 8, 2, 0.1 ), 0.9, 2.42 );           // cube
+                    return Material( float3( 0.9, 0.2, 0.1 ), 0.9 );           // cube
                 case 4:
                     return Material( float3( 1, 0, 0 ), 1 );     // left wall
                 case 5:
@@ -382,10 +382,12 @@ namespace Tmpl8 {
         }
         float3 GetLightPos() const
         {
+            float3 randomPoint = TransformPosition(float3(-0.5f, 0, -0.5f) + Rand(1) * float3(1, 0, 0) + Rand(1) * float3(0, 0, 1), quad.T);
+            return randomPoint - float3( 0, 0.1f, 0 );
             // light point position is the middle of the swinging quad
-            float3 corner1 = TransformPosition( float3( -0.5f, 0, -0.5f ), quad.T );
-            float3 corner2 = TransformPosition( float3( 0.5f, 0, 0.5f ), quad.T );
-            return ( corner1 + corner2 ) * 0.5f - float3( 0, 0.01f, 0 );
+            // float3 corner1 = TransformPosition( float3( -0.5f, 0, -0.5f ), quad.T );
+            // float3 corner2 = TransformPosition( float3( 0.5f, 0, 0.5f ), quad.T );
+            // return ( corner1 + corner2 ) * 0.5f - float3( 0, 0.01f, 0 );
         }
         float3 GetLightColor() const
         {
