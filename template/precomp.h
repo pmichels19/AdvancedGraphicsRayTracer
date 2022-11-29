@@ -1647,12 +1647,15 @@ public:
 	Surface* screen = 0;
 };
 
+#define EPS 0.0001f
 
 #include "Material.h"
+#include "Checkboard.h"
+
+#include "scene.h"
 
 #include "ObjModel.h"
 
-#include "scene.h"
 #include "camera.h"
 #include "renderer.h"
 

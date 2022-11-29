@@ -130,7 +130,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h" />
+    <ClInclude Include="Checkboard.h" />
     <ClInclude Include="Material.h" />
+    <ClInclude Include="ObjModel.h" />
     <ClInclude Include="renderer.h" />
     <ClInclude Include="template\common.h" />
     <ClInclude Include="template\precomp.h" />

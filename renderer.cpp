@@ -23,23 +23,24 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
     float3 I = ray.O + ray.t * ray.D;
     float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
     // float3 albedo = scene.GetAlbedo( ray.objIdx, I );
-    Material mat = scene.GetMaterial( ray.objIdx );
+    Material* mat = scene.GetMaterial( ray.objIdx );
+    float3 matColor = mat->GetColor(I);
     /* visualize normal */ // return ( N + 1 ) * 0.5f;
     /* visualize distance */ // return 0.1f * float3( ray.t, ray.t, ray.t );
     /* visualize albedo */ // return albedo;
-    if ( mat.n < FLT_EPSILON ) {
+    if ( mat->n < FLT_EPSILON ) {
         // non-dielectric material, just do normal diffuse and specularity
-        if ( mat.specular > FLT_EPSILON ) {
+        if ( mat->specular > FLT_EPSILON ) {
             Ray reflectionRay = Ray( I, normalize( reflect( ray.D, N ) ) );
-            result += mat.specular * Trace( reflectionRay, depth - 1 );
+            result += mat->specular * Trace( reflectionRay, depth - 1 );
         }
 
-        if ( mat.diffuse > FLT_EPSILON ) {
-            result += mat.diffuse * DirectIllumination( I, N );
+        if ( mat->diffuse > FLT_EPSILON ) {
+            result += mat->diffuse * DirectIllumination( I, N );
         }
     } else {
         float n1 = 1;
-        float n2 = mat.n;
+        float n2 = mat->n;
         float n1Divn2 = n1 / n2;
         float cosi = dot( N, ray.D );
         if ( ray.inside ) n1Divn2 = 1 / n1Divn2;
@@ -81,9 +82,9 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
 
         // Beer's law, use the color as absorbance instead of the actual color
         if ( ray.inside ) {
-            result.x = result.x * exp( -mat.color.x * ray.t );
-            result.y = result.y * exp( -mat.color.y * ray.t );
-            result.z = result.z * exp( -mat.color.z * ray.t );
+            result.x = result.x * exp( -matColor.x * ray.t );
+            result.y = result.y * exp( -matColor.y * ray.t );
+            result.z = result.z * exp( -matColor.z * ray.t );
         }
 
         return result;
@@ -93,7 +94,7 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
     if ( ray.objIdx == 9 ) {
         return scene.GetAlbedo(9, I) * result;
     }
-    return mat.color * result;
+    return matColor * result;
 }
 
 float3 Renderer::DirectIllumination( float3 I, float3 N ) {

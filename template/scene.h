@@ -24,8 +24,6 @@
 #define PLANE_Y(o,i) {if((t=-(ray.O.y+o)*ray.rD.y)<ray.t)ray.t=t,ray.objIdx=i;}
 #define PLANE_Z(o,i) {if((t=-(ray.O.z+o)*ray.rD.z)<ray.t)ray.t=t,ray.objIdx=i;}
 
-#define EPS 0.0001f
-
 namespace Tmpl8 {
 
     __declspec( align( 64 ) ) class Ray
@@ -262,16 +260,16 @@ namespace Tmpl8 {
             A = v0;
             B = v1;
             C = v2;
-            this->N = normalize( cross(C - A, B - A) );
+            this->N = normalize( cross( C - A, B - A ) );
         }
 
         void Intersect( Ray& ray ) const {
             float3 AB = B - A;
             float3 AC = C - A;
 
-            float denom = dot(cross(ray.D, AC), AB);
+            float denom = dot( cross( ray.D, AC ), AB );
             // if denom is effectively 0 there is no intersection
-            if ( abs(denom) < CL_DBL_EPSILON ) {
+            if ( abs( denom ) < CL_DBL_EPSILON ) {
                 return;
             }
 
@@ -284,7 +282,7 @@ namespace Tmpl8 {
             float v = dot( cross( -ray.D, AB ), AO ) / denom;
             if ( v < 0 || u + v > 1 ) return;
 
-            float t = dot(cross(AO, AB), AC) / denom;
+            float t = dot( cross( AO, AB ), AC ) / denom;
             if ( t < ray.t && t > EPS ) {
                 ray.t = t;
                 ray.objIdx = objIdx;
@@ -334,33 +332,33 @@ namespace Tmpl8 {
             // Note: once we have triangle support we should get rid of the class
             // hierarchy: virtuals reduce performance somewhat.
         }
-        Material GetMaterial( int objIdx ) {
+        Material* GetMaterial( int objIdx ) {
             switch ( objIdx ) {
-                case 0:
-                    return Material( float3( 1, 1, 1 ), 1 );           // light panel
-                case 1:
-                    return Material( float3( 0.5, 0.5, 0.5 ), 0, 1.52 );           // bouncing ball
-                case 2:
-                    return Material( float3( 0, 1, 0 ), 1 );           // rounded corners
-                case 3:
-                    return Material( float3( 0.9, 0.2, 0.1 ), 0.9 );           // cube
-                case 4:
-                    return Material( float3( 1, 0, 0 ), 1 );     // left wall
-                case 5:
-                    return Material( float3( 0, 0, 1 ), 1 );     // right wall
-                case 6:
-                    return Material( float3( 0.75, 0.75, 0.75 ), 1 );     // floor
-                case 7:
-                    return Material( float3( 0.25, 0.25, 0.25 ), 1 );     // ceiling
-                case 8:
-                    return Material( float3( 1, 0, 1 ), 1 );     // front wall
-                case 9:
-                    return Material( float3( 1, 1, 0 ), 1 );     // back wall
-                case 10:
-                    return Material( float3( 0.9, 0.9, 0.9 ), 1 ); // triangle
+                case 0:     // light panel
+                    return &Material( float3( 1, 1, 1 ), 1 );
+                case 1:     // bouncing ball
+                    return &Material( float3( 0.5, 0.5, 0.5 ), 0, 1.52 );
+                case 2:     // rounded corners
+                    return &Material( float3( 0, 1, 0 ), 1 );
+                case 3:     // cube
+                    return &Material( float3( 0.9, 0.2, 0.1 ), 0.9 );
+                case 4:     // left wall
+                    return &Material( float3( 1, 0, 0 ), 1 );
+                case 5:     // right wall
+                    return &Material( float3( 0, 0, 1 ), 1 );
+                case 6:     // floor
+                    return &Checkboard( 0.9f, float3( 0.1, 0.1, 0.1 ), float3( 0.9, 0.9, 0.9 ) );
+                case 7:     // ceiling
+                    return &Material( float3( 0.25, 0.25, 0 ), 1 );
+                case 8:     // front wall
+                    return &Material( float3( 1, 0, 1 ), 1 );
+                case 9:     // back wall
+                    return &Material( float3( 1, 1, 0 ), 1 );
+                case 10:    // triangle
+                    return &Material( float3( 0.9, 0.9, 0.9 ), 1 );
                 default:
                     printf("This should be unreachable - scene, getMaterial()\n");
-                    return Material( float3( 1, 1, 1 ), 1 );
+                    return &Material( float3( 1, 1, 1 ), 1 );
             }
         }
         void SetTime( float t )

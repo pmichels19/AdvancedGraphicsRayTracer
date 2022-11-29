@@ -2,6 +2,7 @@
 
 class Material {
 public:
+    Material() = default;
     Material( float3 color, float diffuse, float n = 0 ) {
         this->color = color;
 
@@ -13,6 +14,10 @@ public:
         if ( n > 1 )  {
             this->n = n;
         }
+    }
+
+    virtual float3 GetColor( float3 I ) {
+        return color;
     }
 
     float3 color;
