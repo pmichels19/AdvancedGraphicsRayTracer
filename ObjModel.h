@@ -12,7 +12,7 @@ public:
         ifstream fin(fileName);
 
         if ( !fin ) {
-            printf("Couldn't open .obj file %s\n", fileName);
+            printf("Couldn't open .obj file %s\n", &fileName);
             return;
         }
 

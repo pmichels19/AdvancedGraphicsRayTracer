@@ -327,7 +327,7 @@ namespace Tmpl8 {
             plane[3] = Plane( 7, float3( 0, -1, 0 ), 2 );			// 7: ceiling
             plane[4] = Plane( 8, float3( 0, 0, 1 ), 3 );			// 8: front wall
             plane[5] = Plane( 9, float3( 0, 0, -1 ), 3.99f );		// 9: back wall
-            triangle = Triangle(10, float3( 0, 0, 1 ), float3( 0.5, 1, 1 ), float3( -0.5, 1, 1 ) ); // 10: triangle
+            triangle = Triangle(10, float3( 0, 0, 3 ), float3( 0.5, 1, 3 ), float3( -0.5, 1, 3 ) ); // 10: triangle
             SetTime( 0 );
             // Note: once we have triangle support we should get rid of the class
             // hierarchy: virtuals reduce performance somewhat.
@@ -349,7 +349,7 @@ namespace Tmpl8 {
                 case 6:     // floor
                     return &Checkboard( 0.9f, float3( 0.1, 0.1, 0.1 ), float3( 0.9, 0.9, 0.9 ) );
                 case 7:     // ceiling
-                    return &Material( float3( 0.25, 0.25, 0 ), 1 );
+                    return &Material( float3( 0.25, 0.75, 0.1 ), 1 );
                 case 8:     // front wall
                     return &Material( float3( 1, 0, 1 ), 1 );
                 case 9:     // back wall
@@ -380,12 +380,9 @@ namespace Tmpl8 {
         }
         float3 GetLightPos() const
         {
+            // random point on the quad area
             float3 randomPoint = TransformPosition(float3(-0.5f, 0, -0.5f) + Rand(1) * float3(1, 0, 0) + Rand(1) * float3(0, 0, 1), quad.T);
             return randomPoint - float3( 0, 0.1f, 0 );
-            // light point position is the middle of the swinging quad
-            // float3 corner1 = TransformPosition( float3( -0.5f, 0, -0.5f ), quad.T );
-            // float3 corner2 = TransformPosition( float3( 0.5f, 0, 0.5f ), quad.T );
-            // return ( corner1 + corner2 ) * 0.5f - float3( 0, 0.01f, 0 );
         }
         float3 GetLightColor() const
         {

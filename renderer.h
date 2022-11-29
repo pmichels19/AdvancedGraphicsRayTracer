@@ -75,11 +75,25 @@ namespace Tmpl8 {
             return 0.5 * ( ( sPolarized * sPolarized ) + ( pPolarized * pPolarized ) );
         }
 
+        float random_float( const float min, const float max ) {
+            return min + ( max - min ) * rand() / ( RAND_MAX + 1.0f );
+        }
+
+        float3 random_in_unit_sphere() {
+            while ( true ) {
+                float3 p = float3( random_float( -1, 1 ), random_float( -1, 1 ), random_float( -1, 1 ) );
+                if ( sqrLength( p ) >= 1 ) continue;
+                return p;
+            }
+        }
+
         // data members
         int2 mousePos;
         float4* accumulator;
         Scene scene;
         Camera camera;
+
+        int* previousMovingHits;
 
         float yaw   = 0;
         float pitch = 0;
