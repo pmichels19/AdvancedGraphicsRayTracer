@@ -80,12 +80,16 @@ namespace Tmpl8 {
         float4* accumulator;
         Scene scene;
         Camera camera;
+
         float yaw   = 0;
         float pitch = 0;
         float roll  = 0;
+
         float xMove = 0;
         float yMove = 0;
         float zMove = 0;
+
+        int stationaryFrames = 0;
     };
 
 } // namespace Tmpl8
