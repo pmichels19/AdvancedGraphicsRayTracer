@@ -1650,6 +1650,8 @@ public:
 
 #include "Material.h"
 
+#include "ObjModel.h"
+
 #include "scene.h"
 #include "camera.h"
 #include "renderer.h"
