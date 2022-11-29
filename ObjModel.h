@@ -29,6 +29,8 @@ public:
                     triangles.push_back( Triangle( objIdxCounter, vertices[v1], vertices[v2], vertices[v3] ));
                     objIdxCounter++;
                     break;
+                default:
+                    break;
             }
         }
 
@@ -43,7 +45,17 @@ public:
         }
     }
 
-    float3 GetNormal( float3 I ) {
-        // TODO...
+    int hasObject( int objIdx ) {
+        int idx = 0;
+        for ( Triangle t : triangles ) {
+            if ( t.objIdx == objIdx ) return idx;
+            idx++;
+        }
+
+        return -1;
+    }
+
+    float3 GetNormal( int triangle, float3 I ) {
+        return triangles[triangle].GetNormal( I );
     }
 };
