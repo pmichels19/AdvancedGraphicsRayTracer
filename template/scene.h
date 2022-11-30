@@ -390,7 +390,7 @@ namespace Tmpl8 {
             // start at 10000 just so we always have enough
             int modelObjIndices = 10000;
             mat4 tetRotation = mat4::RotateX(0.5 * PI) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI );
-            tet = ObjModel("assets/tetrahedron.obj", modelObjIndices, 1.0f / 100.0f, float3( 0 , 0.5, 0 ), tetRotation );
+            tet = ObjModel("assets/tetrahedron.obj", modelObjIndices, 1.0f / 100.0f, float3( 0 , 0.5f, 0.5f ), tetRotation );
             printf("%d\n", modelObjIndices);
             SetTime( 0 );
             // Note: once we have triangle support we should get rid of the class
