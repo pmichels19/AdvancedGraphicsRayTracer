@@ -34,11 +34,13 @@ namespace Tmpl8 {
             lensRadius = aperture / 2.0f;
             focusDistance = 1;
 
+            FOV = 1;
+
             // setup a basic view frustum
-            camPos = float3( 0, 0, -2 );
-            topLeft = camPos + focusDistance * float3( -aspect, 1, 2);
-            topRight = camPos + focusDistance * float3( aspect, 1, 2);
-            bottomLeft = camPos + focusDistance * float3( -aspect, -1, 2 );
+            camPos = float3( 0, 0, -FOV );
+            topLeft = camPos + focusDistance * float3( -aspect, 1, FOV );
+            topRight = camPos + focusDistance * float3( aspect, 1, FOV );
+            bottomLeft = camPos + focusDistance * float3( -aspect, -1, FOV );
             totalRotation = mat4::Identity();
         }
 
@@ -91,6 +93,7 @@ namespace Tmpl8 {
         float aperture;
         float focusDistance;
         float lensRadius;
+        float FOV;
 
         float aspect = (float) SCRWIDTH / (float) SCRHEIGHT;
         float3 camPos;
