@@ -7,9 +7,6 @@ void Renderer::Init() {
     // create fp32 rgb pixel buffer to render to
     accumulator = (float4*) MALLOC64( SCRWIDTH * SCRHEIGHT * 16 );
     memset( accumulator, 0, SCRWIDTH * SCRHEIGHT * 16 );
-
-    previousMovingHits = ( int* ) MALLOC64( SCRWIDTH * SCRHEIGHT * 16 );
-    memset( previousMovingHits, 0, SCRWIDTH * SCRHEIGHT * 16 );
 }
 
 // -----------------------------------------------------------
@@ -134,6 +131,7 @@ void Renderer::Tick( float deltaTime ) {
     // move the camera based on inputs given
     bool stationary = abs(yaw) < FLT_EPSILON && abs(pitch) < FLT_EPSILON && abs(roll) < FLT_EPSILON 
         && abs(xMove) < FLT_EPSILON && abs(yMove) < FLT_EPSILON && abs(zMove) < FLT_EPSILON;
+    bool animation = false; // Set to true for motion blur
 
     if (!stationary) camera.AdjustCamera(yaw, pitch, roll, xMove, yMove, zMove);
     // pixel loop
@@ -144,7 +142,7 @@ void Renderer::Tick( float deltaTime ) {
         // trace a primary ray for each pixel on the line
         for ( int x = 0; x < SCRWIDTH; x++ ) {
             Ray ray = camera.GetPrimaryRay( x, y );
-            scene.SetTime( animTime + Rand( deltaTime * 0.002f ) );
+            if (animation) scene.SetTime( animTime + Rand( deltaTime * 0.002f ) );
             float3 result = Trace( ray );
             //result += Trace( camera.GetPrimaryRay( x, y ) );
             //result += Trace( camera.GetPrimaryRay( x, y ) );
@@ -152,16 +150,7 @@ void Renderer::Tick( float deltaTime ) {
 
             int accIdx = x + y * SCRWIDTH;
 
-            if ( !stationary ) {
-                accumulator[accIdx] = 0;
-            } else if ( ray.objIdx == 0 || ray.objIdx == 1 || ray.objIdx == 3 ) {
-                accumulator[accIdx] = 0;
-                previousMovingHits[accIdx] = 1;
-            } else if ( previousMovingHits[accIdx] == 1 ) {
-                accumulator[accIdx] = 0;
-                previousMovingHits[accIdx] = 0;
-            }
-
+            if ( !stationary || animation ) accumulator[accIdx] = 0;
             // increment the hit count so we don't divide by 0
             accumulator[accIdx].w += 1;
             // take the average over all hits
@@ -174,7 +163,7 @@ void Renderer::Tick( float deltaTime ) {
         }
     }
 
-    scene.SetTime( animTime += deltaTime * 0.002f );
+    if (animation) scene.SetTime( animTime += deltaTime * 0.002f );
     // performance report - running average - ms, MRays/s
     static float avg = 10, alpha = 1;
     avg = ( 1 - alpha ) * avg + alpha * t.elapsed() * 1000;

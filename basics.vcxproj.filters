@@ -19,6 +19,7 @@
       <Filter>template</Filter>
     </ClInclude>
     <ClInclude Include="Material.h" />
+    <ClInclude Include="Checkboard.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

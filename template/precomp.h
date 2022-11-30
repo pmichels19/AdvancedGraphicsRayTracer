@@ -10,6 +10,7 @@
 // C++ headers
 #include <chrono>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <list>
 #include <string>
@@ -1653,9 +1654,6 @@ public:
 #include "Checkboard.h"
 
 #include "scene.h"
-
-#include "ObjModel.h"
-
 #include "camera.h"
 #include "renderer.h"
 

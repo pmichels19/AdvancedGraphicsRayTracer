@@ -304,6 +304,63 @@ namespace Tmpl8 {
         int objIdx = -1;
     };
 
+    class ObjModel {
+    private:
+        vector<float3> vertices;
+        vector<Triangle> triangles;
+    public:
+        ObjModel() = default;
+        ObjModel( const string fileName, int &objIdx, const float scale = 1, const float3 offset = float3( 0 ) ) {
+            ifstream in( fileName, ios::in );
+            if ( !in ) {
+                printf("Couldn't open OBJ file.\n");
+                return;
+            }
+
+            string line;
+            while ( getline( in, line ) ) {
+                if ( line.substr( 0, 2 ) == "v " ) {
+                    //check v for vertices
+                    istringstream v( line.substr( 2 ) );
+                    float3 vert;
+                    float x, y, z;
+                    v >> x; v >> y; v >> z;
+                    vert = float3( x, y, z );
+                    vertices.push_back( vert * scale + offset );
+                } else if ( line.substr( 0, 2 ) == "f " ) {
+                    //check f for faces
+                    int a, b, c;
+                    const char* chh = line.c_str();
+
+                    sscanf( chh, "f %i/%*i/%*i %i/%*i/%*i %i/%*i/%*i", &a, &b, &c );
+
+                    triangles.push_back( Triangle( objIdx, vertices[a - 1], vertices[b - 1], vertices[c - 1] ));
+                }
+            }
+        }
+
+        void Intersect( Ray& ray ) const {
+            // intersect all triangles in this object
+            for ( Triangle t : triangles ) {
+                t.Intersect( ray );
+            }
+        }
+
+        int hasObject( const int objIdx ) const {
+            int idx = 0;
+            for ( Triangle t : triangles ) {
+                if ( t.objIdx == objIdx ) return idx;
+                idx++;
+            }
+
+            return -1;
+        }
+
+        float3 GetNormal( int triangle, float3 I ) const {
+            return triangles[triangle].GetNormal( I );
+        }
+    };
+
     // -----------------------------------------------------------
     // Scene class
     // We intersect this. The query is internally forwarded to the
@@ -328,6 +385,10 @@ namespace Tmpl8 {
             plane[4] = Plane( 8, float3( 0, 0, 1 ), 3 );			// 8: front wall
             plane[5] = Plane( 9, float3( 0, 0, -1 ), 3.99f );		// 9: back wall
             triangle = Triangle(10, float3( 0, 0, 3 ), float3( 0.5, 1, 3 ), float3( -0.5, 1, 3 ) ); // 10: triangle
+
+            // start at 10000 just so we always have enough
+            int modelObjIndices = 10000;
+            model = ObjModel("assets/tetrahedron.obj", modelObjIndices, 1.0f / 100.0f, float3( 0 , 0.5, 0 ) );
             SetTime( 0 );
             // Note: once we have triangle support we should get rid of the class
             // hierarchy: virtuals reduce performance somewhat.
@@ -355,8 +416,12 @@ namespace Tmpl8 {
                 case 9:     // back wall
                     return &Material( float3( 1, 1, 0 ), 1 );
                 case 10:    // triangle
-                    return &Material( float3( 0.9, 0.9, 0.9 ), 1 );
+                    return &Material( float3( 0, 0.9, 0.9 ), 1 );
                 default:
+                    if ( model.hasObject( objIdx ) != -1 ) {
+                        return &Material( float3( 0.2, 0.8, 0.8 ), 1 );
+                    }
+                    
                     printf("This should be unreachable - scene, getMaterial()\n");
                     return &Material( float3( 1, 1, 1 ), 1 );
             }
@@ -400,6 +465,7 @@ namespace Tmpl8 {
             sphere2.Intersect( ray );
             cube.Intersect( ray );
             triangle.Intersect(ray);
+            model.Intersect(ray);
         }
         bool IsOccluded( Ray& ray ) const
         {
@@ -410,6 +476,7 @@ namespace Tmpl8 {
             sphere2.Intersect( ray );
             cube.Intersect( ray );
             triangle.Intersect( ray );
+            model.Intersect(ray);
             return ray.t < rayLength && ray.t > 0.001f; // final addition to compensate for floating point inaccuracy
             // technically this is wasteful: 
             // - we potentially search beyond rayLength
@@ -422,13 +489,14 @@ namespace Tmpl8 {
             // this way we prevent calculating it multiple times.
             if ( objIdx == -1 ) return float3( 0 ); // or perhaps we should just crash
             float3 N;
-            if ( objIdx == 0 ) N = quad.GetNormal( I );
+            int modelTriangle = model.hasObject( objIdx );
+            if ( modelTriangle != -1 ) N = model.GetNormal( modelTriangle, I );
+            else if ( objIdx == 0 ) N = quad.GetNormal( I );
             else if ( objIdx == 1 ) N = sphere.GetNormal( I );
             else if ( objIdx == 2 ) N = sphere2.GetNormal( I );
             else if ( objIdx == 3 ) N = cube.GetNormal( I );
             else if ( objIdx == 10 ) N = triangle.GetNormal( I );
-            else
-            {
+            else {
                 // faster to handle the 6 planes without a call to GetNormal
                 N = float3( 0 );
                 N[( objIdx - 4 ) / 2] = 1 - 2 * (float) ( objIdx & 1 );
@@ -466,6 +534,7 @@ namespace Tmpl8 {
         Cube cube;
         Triangle triangle;
         Plane plane[6];
+        ObjModel model;
     };
 
 }

@@ -72,7 +72,7 @@ namespace Tmpl8 {
             float sPolarized = ( n1 * cosi - n2 * cost ) / ( n1 * cosi + n2 * cost );
             float pPolarized = ( n1 * cost - n2 * cosi ) / ( n1 * cost + n2 * cosi );
 
-            return 0.5 * ( ( sPolarized * sPolarized ) + ( pPolarized * pPolarized ) );
+            return 0.5f * ( ( sPolarized * sPolarized ) + ( pPolarized * pPolarized ) );
         }
 
         float random_float( const float min, const float max ) {
@@ -92,8 +92,6 @@ namespace Tmpl8 {
         float4* accumulator;
         Scene scene;
         Camera camera;
-
-        int* previousMovingHits;
 
         float yaw   = 0;
         float pitch = 0;
