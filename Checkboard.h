@@ -7,7 +7,7 @@ public:
         secondColor = color2;
     }
 
-    virtual float3 GetColor( float3 I ) {
+    float3 GetColor( float3 I ) {
         bool evenX = abs( ( (int) floor( I.x ) ) % 2 ) == 0;
         bool evenZ = abs( ( (int) floor( I.z ) ) % 2 ) == 0;
         if ( evenX == evenZ ) {

@@ -422,7 +422,7 @@ namespace Tmpl8 {
                     return &Material( float3( 0, 0.9, 0.9 ), 1 );
                 default:
                     if ( tet.hasObject( objIdx ) != -1 ) {
-                        return &Material( float3( 1, 0.5, 0.1 ), 1, 2.42 );
+                        return &Material( float3( 0.3, 0.2, 0.1 ), 1, 2.42 );
                     }
                     
                     printf("This should be unreachable - scene, getMaterial()\n");
