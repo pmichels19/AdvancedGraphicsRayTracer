@@ -132,6 +132,7 @@
     <ClInclude Include="camera.h" />
     <ClInclude Include="Checkboard.h" />
     <ClInclude Include="Material.h" />
+    <ClInclude Include="Ray.h" />
     <ClInclude Include="renderer.h" />
     <ClInclude Include="template\common.h" />
     <ClInclude Include="template\precomp.h" />

@@ -1650,6 +1650,8 @@ public:
 
 #define EPS 0.0001f
 
+#include "Ray.h"
+
 #include "Material.h"
 #include "Checkboard.h"
 
