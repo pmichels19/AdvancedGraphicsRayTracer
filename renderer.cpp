@@ -21,9 +21,9 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
     scene.FindNearest( ray );
     // if we hit nothing return black
     if ( ray.objIdx == -1 ) {
-        float t = 0.5f * ( ray.D.y + 1.0f );
-        return ( 1.0f - t ) * float3( 1.0f, 1.0f, 1.0f ) + t * float3( 0.5f, 0.7f, 1.0f );
-        //return float3( 0 );
+        //float t = 0.5f * ( ray.D.y + 1.0f );
+        //return ( 1.0f - t ) * float3( 1.0f, 1.0f, 1.0f ) + t * float3( 0.5f, 0.7f, 1.0f );
+        return float3( 0 );
     }
     // fetch intersection point, normal and material
     float3 I = ray.O + ray.t * ray.D;
