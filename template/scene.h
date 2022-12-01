@@ -399,19 +399,19 @@ namespace Tmpl8 {
         Material* GetMaterial( int objIdx ) {
             switch ( objIdx ) {
                 case 0:     // light panel
-                    return &Material( float3( 1, 1, 1 ), 1 );
+                    return &Material( float3( 1, 0.5, 0 ), 1 );
                 case 1:     // bouncing ball
                     return &Material( float3( 0.5, 0.5, 0.5 ), 0, 1.52 );
                 case 2:     // rounded corners
                     return &Material( float3( 0, 1, 0 ), 1 );
                 case 3:     // cube
-                    return &Material( float3( 0.9, 0.2, 0.1 ), 0.9 );
+                    return &Material( float3( 0.9, 0.8, 0.7 ), 0.5f );
                 case 4:     // left wall
                     return &Material( float3( 1, 0, 0 ), 1 );
                 case 5:     // right wall
                     return &Material( float3( 0, 0, 1 ), 1 );
                 case 6:     // floor
-                    return &Checkboard( 0.9f, float3( 0.1, 0.1, 0.1 ), float3( 0.9, 0.9, 0.9 ) );
+                    return &Checkboard( 0.8f, float3( 0.1, 0.1, 0.1 ), float3( 0.9, 0.9, 0.9 ) );
                 case 7:     // ceiling
                     return &Material( float3( 0.25, 0.75, 0.1 ), 1 );
                 case 8:     // front wall
@@ -422,10 +422,10 @@ namespace Tmpl8 {
                     return &Material( float3( 0, 0.9, 0.9 ), 1 );
                 default:
                     if ( tet.hasObject( objIdx ) != -1 ) {
-                        return &Material( float3( 0.3, 0.2, 0.1 ), 1, 2.42 );
+                        return &Material( float3( 0.8, 0.2, 0.1 ), 1, 2.42 );
                     }
-                    
-                    printf("This should be unreachable - scene, getMaterial()\n");
+
+                    printf( "This should be unreachable - scene, getMaterial()\n" );
                     return &Material( float3( 1, 1, 1 ), 1 );
             }
         }
@@ -452,20 +452,23 @@ namespace Tmpl8 {
             float3 randomPoint = TransformPosition(float3(-0.5f, 0, -0.5f) + Rand(1) * float3(1, 0, 0) + Rand(1) * float3(0, 0, 1), quad.T);
             return randomPoint - float3( 0, 0.1f, 0 );
         }
-        float3 GetLightColor() const
-        {
+        float3 GetLightColor() const {
             return float3( 24, 24, 22 );
+        }
+        float3 GetLightDir() const {
+            return float3( 0, -1, 0 );
         }
         void FindNearest( Ray& ray ) const
         {
             // room walls - ugly shortcut for more speed
             float t;
-            if ( ray.D.x < 0 ) PLANE_X( 3, 4 ) else PLANE_X( -2.99f, 5 );
-            if ( ray.D.y < 0 ) PLANE_Y( 1, 6 ) else PLANE_Y( -2, 7 );
-            if ( ray.D.z < 0 ) PLANE_Z( 3, 8 ) else PLANE_Z( -3.99f, 9 );
+            //if ( ray.D.x < 0 ) PLANE_X( 3, 4 ) else PLANE_X( -2.99f, 5 );
+            //if ( ray.D.y < 0 ) PLANE_Y( 1, 6 ) else PLANE_Y( -2, 7 );
+            //if ( ray.D.z < 0 ) PLANE_Z( 3, 8 ) else PLANE_Z( -3.99f, 9 );
+            if ( ray.D.y < 0 ) PLANE_Y( 1, 6 );
             quad.Intersect( ray );
             sphere.Intersect( ray );
-            sphere2.Intersect( ray );
+            //sphere2.Intersect( ray );
             cube.Intersect( ray );
             triangle.Intersect(ray);
             tet.Intersect(ray);
@@ -476,11 +479,11 @@ namespace Tmpl8 {
             // skip planes: it is not possible for the walls to occlude anything
             quad.Intersect( ray );
             sphere.Intersect( ray );
-            sphere2.Intersect( ray );
+            //sphere2.Intersect( ray );
             cube.Intersect( ray );
             triangle.Intersect( ray );
             tet.Intersect(ray);
-            return ray.t < rayLength && ray.t > 0.001f; // final addition to compensate for floating point inaccuracy
+            return ray.t < rayLength && ray.t > EPS; // final addition to compensate for floating point inaccuracy
             // technically this is wasteful: 
             // - we potentially search beyond rayLength
             // - we store objIdx and t when we just need a yes/no

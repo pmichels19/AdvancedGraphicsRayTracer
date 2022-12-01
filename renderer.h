@@ -6,8 +6,22 @@ namespace Tmpl8 {
     public:
         // game flow methods
         void Init();
-        float3 Trace( Ray& ray, int depth = 10 );
-        float3 DirectIllumination( float3 I, float3 N );
+        float3 Trace( Ray& ray, int depth = 50 );
+
+        float random_float( const float min, const float max ) {
+            return min + ( max - min ) * rand() / ( RAND_MAX + 1.0f );
+        }
+
+        float3 DiffuseReflection( float3 N ) {
+            // normally distributed ray direction within the hemisphere
+            while ( true ) {
+                float3 R = float3( random_float( -1.0f, 1.0f ), random_float( -1.0f, 1.0f ), random_float( -1.0f, 1.0f ) );                         
+                if ( sqrLength( R ) > 1 ) continue;
+                if ( dot( R, N ) < 0 ) R = -R;
+                return normalize( R );
+            }
+        }
+
         void Tick( float deltaTime );
 
         void Shutdown() { /* implement if you want to do something on exit */ }
@@ -73,18 +87,6 @@ namespace Tmpl8 {
             float pPolarized = ( n1 * cost - n2 * cosi ) / ( n1 * cost + n2 * cosi );
 
             return 0.5f * ( ( sPolarized * sPolarized ) + ( pPolarized * pPolarized ) );
-        }
-
-        float random_float( const float min, const float max ) {
-            return min + ( max - min ) * rand() / ( RAND_MAX + 1.0f );
-        }
-
-        float3 random_in_unit_sphere() {
-            while ( true ) {
-                float3 p = float3( random_float( -1, 1 ), random_float( -1, 1 ), random_float( -1, 1 ) );
-                if ( sqrLength( p ) >= 1 ) continue;
-                return p;
-            }
         }
 
         // data members

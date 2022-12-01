@@ -13,113 +13,82 @@ void Renderer::Init() {
 // Evaluate light transport
 // -----------------------------------------------------------
 float3 Renderer::Trace( Ray& ray, int depth ) {
-    float3 result = float3( 0 );
     if ( depth == 0 ) {
         return 0;
     }
 
+    // intersect the ray with the scene
     scene.FindNearest( ray );
-    if ( ray.objIdx == -1 ) return 0; // or a fancy sky color
+    // if we hit nothing return black
+    if ( ray.objIdx == -1 ) {
+        float t = 0.5f * ( ray.D.y + 1.0f );
+        return ( 1.0f - t ) * float3( 1.0f, 1.0f, 1.0f ) + t * float3( 0.5f, 0.7f, 1.0f );
+        //return float3( 0 );
+    }
+    // fetch intersection point, normal and material
     float3 I = ray.O + ray.t * ray.D;
     float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
-    // float3 albedo = scene.GetAlbedo( ray.objIdx, I );
     Material* mat = scene.GetMaterial( ray.objIdx );
-    float3 matColor = mat->GetColor(I);
-    /* visualize normal */ // return ( N + 1 ) * 0.5f;
-    /* visualize distance */ // return 0.1f * float3( ray.t, ray.t, ray.t );
-    /* visualize albedo */ // return albedo;
-    if ( mat->n < FLT_EPSILON ) {
-        // non-dielectric material, just do normal diffuse and specularity
-        if ( mat->specular > FLT_EPSILON ) {
-            Ray reflectionRay = Ray( I, normalize( reflect( ray.D, N ) ) );
-            result += mat->specular * Trace( reflectionRay, depth - 1 );
-        }
+    float3 matColor = mat->GetColor( I );
 
-        if ( mat->diffuse > FLT_EPSILON ) {
-            result += mat->diffuse * DirectIllumination( I, N );
-        }
-    } else {
+    // if we hit a lightsource return its color, atm only supports the quad
+    if ( ray.objIdx == 0 ) {
+        if ( dot( scene.GetLightDir(), ray.D ) > 0 ) return float3( 0 );
+        return scene.GetLightColor();
+    }
+    if ( mat->n > 1 - FLT_EPSILON ) {
         float n1 = 1;
         float n2 = mat->n;
         float n1Divn2 = n1 / n2;
         float cosi = dot( N, ray.D );
-        if ( ray.inside ) n1Divn2 = 1 / n1Divn2;
+        float3 beers = float3( 1 );
+        if ( ray.inside ) {
+            beers.x = exp( -matColor.x * ray.t );
+            beers.y = exp( -matColor.y * ray.t );
+            beers.z = exp( -matColor.z * ray.t );
+            n1Divn2 = 1 / n1Divn2;
+        }
 
         float k = 1 - ( n1Divn2 * n1Divn2 ) * ( 1 - ( cosi * cosi ) );
-
+        // no choice when we TIR
         if ( k < 0 ) {
-            // handle Total Internal Reflection (TIR)
             float3 R = normalize( reflect( ray.D, N ) );
-            Ray TIRRay = Ray(I, R);
+            Ray TIRRay = Ray( I, R );
             TIRRay.inside = true;
-            result += Trace( TIRRay, depth - 1 );
-        } else {
-            float Fr = 0;
-            if ( !ray.inside ) {
-                float sini = length( cross( N, ray.D ) );
-                float cost = sqrtf( 1 - sqrf( n1Divn2 * sini ) );
-
-                float Fr = Fresnel( n1, n2, cost, -cosi );
-            }
-
-            float Ft = 1 - Fr;
-
-            // reflection
-            if ( Fr > FLT_EPSILON ) {
-                float3 R = normalize( reflect( ray.D, N ) );
-                Ray reflectionRay = Ray( I, R );
-                result += Fr * Trace( reflectionRay, depth - 1 );
-            }
-
-            // refraction
-            if ( Ft > FLT_EPSILON ) {
-                float3 T = normalize( n1Divn2 * ray.D - ( n1Divn2 * cosi + sqrtf( k ) ) * N );
-                Ray refractionRay = Ray( I, T );
-                refractionRay.inside = !ray.inside; // TODO: only when hitting object with volume, maybe material property?
-                result += Ft * Trace( refractionRay, depth - 1 );
-            }
+            return beers * Trace( TIRRay, depth - 1 );
         }
 
-        // Beer's law, use the color as absorbance instead of the actual color
-        if ( ray.inside ) {
-            result.x = result.x * exp( -matColor.x * ray.t );
-            result.y = result.y * exp( -matColor.y * ray.t );
-            result.z = result.z * exp( -matColor.z * ray.t );
+        // random number we will use to decide what ray we are going to sample next
+        float choice = random_float( 0, 1 );
+        float Fr = 0;
+        if ( !ray.inside ) {
+            float sini = length( cross( N, ray.D ) );
+            float cost = sqrtf( 1 - sqrf( n1Divn2 * sini ) );
+
+            float Fr = Fresnel( n1, n2, cost, -cosi );
         }
 
-        return result;
+        if ( Fr > FLT_EPSILON && choice < Fr ) {
+            float3 R = normalize( reflect( ray.D, N ) );
+            Ray reflectionRay = Ray( I, R );
+            return matColor * Trace( reflectionRay, depth - 1 );
+        }
+
+        float3 T = normalize( n1Divn2 * ray.D - ( n1Divn2 * cosi + sqrtf( k ) ) * N );
+        Ray refractionRay = Ray( I, T );
+        refractionRay.inside = !ray.inside; // TODO: only when hitting object with volume, maybe material property?
+        return beers * Trace( refractionRay, depth - 1 );
+    } else if ( mat->specular > FLT_EPSILON && random_float( 0, 1 ) < mat->specular ) {
+        Ray reflectionRay = Ray( I, normalize( reflect( ray.D, N ) ) );
+        return matColor * Trace( reflectionRay, depth - 1 );
     }
 
-    //return mat.color * result;
-    if ( ray.objIdx == 9 ) {
-        return scene.GetAlbedo(9, I) * result;
-    }
-    return matColor * result;
-}
-
-float3 Renderer::DirectIllumination( float3 I, float3 N ) {
-    float3 result = float3( 0 );
-    int samples = 0;
-    for (samples; samples < 4; samples++) {
-        float3 intersectionToLight = scene.GetLightPos() - I;
-        float distance = length(intersectionToLight);
-        intersectionToLight /= distance;
-        float dotDN = dot(intersectionToLight, N);
-
-        if (dotDN < 0) {
-            continue;
-        }
-
-        Ray toLight = Ray(I, intersectionToLight, distance - 2 * EPS);
-        // return black if no light source connects or if we are facing the occluded side of an object
-        if (scene.IsOccluded(toLight)) {
-            continue;
-        }
-
-        result += (dotDN / (distance * distance)) * scene.GetLightColor();
-    }
-
-    return result / (float) samples;
+    // if we got here we do diffuse stuff
+    float3 brdf = matColor / PI;
+    float3 R = DiffuseReflection( N );
+    Ray diffuseRay = Ray( I, R );
+    float3 ei = Trace( diffuseRay, depth - 1 ) * dot( N, R );
+    return PI * 2.0f * brdf * ei;
 }
 
 // -----------------------------------------------------------
@@ -141,12 +110,14 @@ void Renderer::Tick( float deltaTime ) {
     for ( int y = 0; y < SCRHEIGHT; y++ ) {
         // trace a primary ray for each pixel on the line
         for ( int x = 0; x < SCRWIDTH; x++ ) {
-            Ray ray = camera.GetPrimaryRay( x, y );
-            if (animation) scene.SetTime( animTime + Rand( deltaTime * 0.002f ) );
-            float3 result = Trace( ray );
-            //result += Trace( camera.GetPrimaryRay( x, y ) );
-            //result += Trace( camera.GetPrimaryRay( x, y ) );
-            //result += Trace( camera.GetPrimaryRay( x, y ) );
+            Ray ray;
+            int samples;
+            float3 result = float3( 0 );
+            for ( samples = 0; samples < 1; samples++ ) { // iterate to 1 to disable anti-aliasing
+                if ( animation ) scene.SetTime( animTime + Rand( deltaTime * 0.002f ) );
+                ray = camera.GetPrimaryRay( x, y );
+                result += Trace( ray );
+            }
 
             int accIdx = x + y * SCRWIDTH;
 
@@ -154,7 +125,7 @@ void Renderer::Tick( float deltaTime ) {
             // increment the hit count so we don't divide by 0
             accumulator[accIdx].w += 1;
             // take the average over all hits
-            accumulator[accIdx] = accumulator[accIdx] + ( 1.0f / accumulator[accIdx].w ) * ( float4( result, accumulator[accIdx].w ) - accumulator[accIdx] );
+            accumulator[accIdx] = accumulator[accIdx] + ( 1.0f / accumulator[accIdx].w ) * ( float4( ( 1.0f / (float) samples ) * result, accumulator[accIdx].w ) - accumulator[accIdx] );
         }
 
         // translate accumulator contents to rgb32 pixels
