@@ -91,6 +91,34 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
     return PI * 2.0f * brdf * ei;
 }
 
+float3 Renderer::newTrace( Ray& ray, int depth ) {
+    if ( depth == 0 ) {
+        return 0;
+    }
+
+    // intersect the ray with the scene
+    scene.FindNearest( ray );
+    // if we hit nothing return black
+    if ( ray.objIdx == -1 ) {
+        float t = 0.5f * ( ray.D.y + 1.0f );
+        return ( 1.0f - t ) * float3( 1.0f, 1.0f, 1.0f ) + t * float3( 0.5f, 0.7f, 1.0f );
+        //return float3( 0 );
+    }
+
+    // fetch intersection point, normal and material
+    float3 I = ray.O + ray.t * ray.D;
+    float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
+    shared_ptr<ObjectMaterial> mat = scene.newGetMaterial( ray.objIdx );
+
+    float3 color;
+    Ray ray_out;
+    if ( mat->bounce( ray, I, N, color, ray_out ) ) {
+        return color * newTrace( ray_out, depth - 1 );
+    }
+
+    return color;
+}
+
 // -----------------------------------------------------------
 // Main application tick function - Executed once per frame
 // -----------------------------------------------------------
@@ -116,7 +144,7 @@ void Renderer::Tick( float deltaTime ) {
             for ( samples = 0; samples < 1; samples++ ) { // iterate to 1 to disable anti-aliasing
                 if ( animation ) scene.SetTime( animTime + Rand( deltaTime * 0.002f ) );
                 ray = camera.GetPrimaryRay( x, y );
-                result += Trace( ray );
+                result += newTrace( ray );
             }
 
             int accIdx = x + y * SCRWIDTH;

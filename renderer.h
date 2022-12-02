@@ -8,10 +8,6 @@ namespace Tmpl8 {
         void Init();
         float3 Trace( Ray& ray, int depth = 50 );
 
-        float random_float( const float min, const float max ) {
-            return min + ( max - min ) * rand() / ( RAND_MAX + 1.0f );
-        }
-
         float3 DiffuseReflection( float3 N ) {
             // normally distributed ray direction within the hemisphere
             while ( true ) {
@@ -21,6 +17,8 @@ namespace Tmpl8 {
                 return normalize( R );
             }
         }
+
+        float3 newTrace( Ray& ray, int depth = 50 );
 
         void Tick( float deltaTime );
 

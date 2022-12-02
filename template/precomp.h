@@ -1650,7 +1650,19 @@ public:
 
 #define EPS 0.0001f
 
+inline float random_float( const float min, const float max ) {
+	return min + ( max - min ) * rand() / ( RAND_MAX + 1.0f );
+}
+
 #include "Ray.h"
+
+#include "ObjectMaterial.h"
+#include "Mirror.h"
+#include "Diffuse.h"
+#include "Dielectric.h"
+#include "Light.h"
+#include "DSMix.h"
+#include "Checkerboard.h"
 
 #include "Material.h"
 #include "Checkboard.h"

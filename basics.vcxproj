@@ -131,7 +131,14 @@
   <ItemGroup>
     <ClInclude Include="camera.h" />
     <ClInclude Include="Checkboard.h" />
+    <ClInclude Include="Checkerboard.h" />
+    <ClInclude Include="Dielectric.h" />
+    <ClInclude Include="Diffuse.h" />
+    <ClInclude Include="DSMix.h" />
+    <ClInclude Include="Light.h" />
     <ClInclude Include="Material.h" />
+    <ClInclude Include="Mirror.h" />
+    <ClInclude Include="ObjectMaterial.h" />
     <ClInclude Include="Ray.h" />
     <ClInclude Include="renderer.h" />
     <ClInclude Include="template\common.h" />

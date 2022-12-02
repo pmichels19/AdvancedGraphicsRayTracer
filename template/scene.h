@@ -348,6 +348,21 @@ namespace Tmpl8 {
     public:
         Scene()
         {
+            red     = make_shared<Diffuse>( Diffuse( float3( 1.0f, 0.0f, 0.0f ) ) );
+            green   = make_shared<Diffuse>( Diffuse( float3( 0.0f, 1.0f, 0.0f ) ) );
+            blue    = make_shared<Diffuse>( Diffuse( float3( 0.0f, 0.0f, 1.0f ) ) );
+            white   = make_shared<Diffuse>( Diffuse( float3( 1.0f, 1.0f, 1.0f ) ) );
+
+            mirror  = make_shared<Mirror>( Mirror( float3( 1.0f, 1.0f, 1.0f ) ) );
+
+            mix     = make_shared<DSMix>( DSMix( float3( 0.9f, 0.2f, 0.1f ), 0.5f ) );
+
+            checkerboard = make_shared<Checkerboard>( Checkerboard( float3( 0.1f, 0.1f, 0.1f ), float3( 0.9f, 0.9f, 0.9f ), 0.95f ) );
+
+            glass   = make_shared<Dielectric>( Dielectric( float3( 0.5f, 0.5f, 0.5f ), 1.52f ) );
+            diamond = make_shared<Dielectric>( Dielectric( float3( 4.0f, 1.0f, 0.7f ), 2.42f ) );
+
+            lamp = make_shared<Light>( Light( float3( 24.0f, 24.0f, 22.0f ), float3( 0.0f, -1.0f, 0.0f ) ) );
             // we store all primitives in one continuous buffer
             quad = Quad( 0, 1 );									// 0: light source
             sphere = Sphere( 1, float3( 0 ), 0.5f );				// 1: bouncing ball
@@ -379,7 +394,7 @@ namespace Tmpl8 {
                 case 2:     // rounded corners
                     return &Material( float3( 0, 1, 0 ), 1 );
                 case 3:     // cube
-                    return &Material( float3( 0.9, 0.8, 0.7 ), 0.5f );
+                    return &Material( float3( 0.9, 0.2, 0.1 ), 0.5f );
                 case 4:     // left wall
                     return &Material( float3( 1, 0, 0 ), 1 );
                 case 5:     // right wall
@@ -401,6 +416,39 @@ namespace Tmpl8 {
 
                     printf( "This should be unreachable - scene, getMaterial()\n" );
                     return &Material( float3( 1, 1, 1 ), 1 );
+            }
+        }
+        shared_ptr<ObjectMaterial> newGetMaterial( int objIdx ) {
+            switch ( objIdx ) {
+                case 0:     // light panel
+                    return lamp;
+                case 1:     // bouncing ball
+                    return glass;
+                case 2:     // rounded corners
+                    return green;
+                case 3:     // cube
+                    return mix;
+                case 4:     // left wall
+                    return red;
+                case 5:     // right wall
+                    return blue;
+                case 6:     // floor
+                    return checkerboard;
+                case 7:     // ceiling
+                    return white;
+                case 8:     // front wall
+                    return white;
+                case 9:     // back wall
+                    return green;
+                case 10:    // triangle
+                    return mirror;
+                default:
+                    if ( tet.hasObject( objIdx ) != -1 ) {
+                        return diamond;
+                    }
+
+                    printf( "This should be unreachable - scene, getMaterial()\n" );
+                    return white;
             }
         }
         void SetTime( float t )
@@ -516,6 +564,22 @@ namespace Tmpl8 {
         Triangle triangle;
         Plane plane[6];
         ObjModel tet;
+
+        shared_ptr<ObjectMaterial> red;
+        shared_ptr<ObjectMaterial> green;
+        shared_ptr<ObjectMaterial> blue;
+        shared_ptr<ObjectMaterial> white;
+
+        shared_ptr<ObjectMaterial> mirror;
+
+        shared_ptr<ObjectMaterial> mix;
+
+        shared_ptr<ObjectMaterial> checkerboard;
+
+        shared_ptr<ObjectMaterial> glass;
+        shared_ptr<ObjectMaterial> diamond;
+
+        shared_ptr<ObjectMaterial> lamp;
     };
 
 }
