@@ -15,7 +15,7 @@ public:
             ray_out = Ray( I, normalize( reflect( ray_in.D, N ) ) );
         } else if ( specular < FLT_EPSILON ) {
             // if specular is 0, do diffuse reflection
-            float3 R = diffuseReflect( N );
+            float3 R = DiffuseReflection( N );
             ray_out = Ray( I, R );
             attenuation *= 2.0f * dot( N, R );
         } else {
@@ -23,7 +23,7 @@ public:
             if ( random_float( 0, 1 ) < specular ) {
                 ray_out = Ray( I, normalize( reflect( ray_in.D, N ) ) );
             } else {
-                float3 R = diffuseReflect( N );
+                float3 R = DiffuseReflection( N );
                 ray_out = Ray( I, R );
                 attenuation *= 2.0f * dot( N, R );
             }

@@ -1664,9 +1664,6 @@ inline float random_float( const float min, const float max ) {
 #include "DSMix.h"
 #include "Checkerboard.h"
 
-#include "Material.h"
-#include "Checkboard.h"
-
 #include "scene.h"
 #include "camera.h"
 #include "renderer.h"

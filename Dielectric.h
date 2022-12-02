@@ -29,7 +29,7 @@ public:
                 float sini = length( cross( N, ray_in.D ) );
                 float cost = sqrtf( 1 - sqrf( n1Divn2 * sini ) );
 
-                float Fr = solveFresnel( n1, n2, cost, -cosi );
+                float Fr = Fresnel( n1, n2, cost, -cosi );
             }
 
             if ( Fr > FLT_EPSILON && random_float( 0, 1 ) < Fr ) {

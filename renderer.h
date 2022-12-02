@@ -8,18 +8,6 @@ namespace Tmpl8 {
         void Init();
         float3 Trace( Ray& ray, int depth = 50 );
 
-        float3 DiffuseReflection( float3 N ) {
-            // normally distributed ray direction within the hemisphere
-            while ( true ) {
-                float3 R = float3( random_float( -1.0f, 1.0f ), random_float( -1.0f, 1.0f ), random_float( -1.0f, 1.0f ) );                         
-                if ( sqrLength( R ) > 1 ) continue;
-                if ( dot( R, N ) < 0 ) R = -R;
-                return normalize( R );
-            }
-        }
-
-        float3 newTrace( Ray& ray, int depth = 50 );
-
         void Tick( float deltaTime );
 
         void Shutdown() { /* implement if you want to do something on exit */ }
@@ -78,13 +66,6 @@ namespace Tmpl8 {
             // zMove
             if ( key == 87 ) zMove += 1; // w
             if ( key == 83 ) zMove -= 1; // s
-        }
-
-        float Fresnel( float n1, float n2, float cost, float cosi ) {
-            float sPolarized = ( n1 * cosi - n2 * cost ) / ( n1 * cosi + n2 * cost );
-            float pPolarized = ( n1 * cost - n2 * cosi ) / ( n1 * cost + n2 * cosi );
-
-            return 0.5f * ( ( sPolarized * sPolarized ) + ( pPolarized * pPolarized ) );
         }
 
         // data members

@@ -385,40 +385,7 @@ namespace Tmpl8 {
             // Note: once we have triangle support we should get rid of the class
             // hierarchy: virtuals reduce performance somewhat.
         }
-        Material* GetMaterial( int objIdx ) {
-            switch ( objIdx ) {
-                case 0:     // light panel
-                    return &Material( float3( 1, 0.5, 0 ), 1 );
-                case 1:     // bouncing ball
-                    return &Material( float3( 0.5, 0.5, 0.5 ), 0, 1.52 );
-                case 2:     // rounded corners
-                    return &Material( float3( 0, 1, 0 ), 1 );
-                case 3:     // cube
-                    return &Material( float3( 0.9, 0.2, 0.1 ), 0.5f );
-                case 4:     // left wall
-                    return &Material( float3( 1, 0, 0 ), 1 );
-                case 5:     // right wall
-                    return &Material( float3( 0, 0, 1 ), 1 );
-                case 6:     // floor
-                    return &Checkboard( 1.0f, float3( 0.1, 0.1, 0.1 ), float3( 0.9, 0.9, 0.9 ) );
-                case 7:     // ceiling
-                    return &Material( float3( 0.25, 0.75, 0.1 ), 1 );
-                case 8:     // front wall
-                    return &Material( float3( 1, 0, 1 ), 1 );
-                case 9:     // back wall
-                    return &Material( float3( 1, 1, 0 ), 1 );
-                case 10:    // triangle
-                    return &Material( float3( 0, 0.9, 0.9 ), 1 );
-                default:
-                    if ( tet.hasObject( objIdx ) != -1 ) {
-                        return &Material( float3( 0.8, 0.2, 0.1 ), 1, 2.42 );
-                    }
-
-                    printf( "This should be unreachable - scene, getMaterial()\n" );
-                    return &Material( float3( 1, 1, 1 ), 1 );
-            }
-        }
-        shared_ptr<ObjectMaterial> newGetMaterial( int objIdx ) {
+        shared_ptr<ObjectMaterial> GetMaterial( int objIdx ) {
             switch ( objIdx ) {
                 case 0:     // light panel
                     return lamp;
@@ -476,9 +443,6 @@ namespace Tmpl8 {
         }
         float3 GetLightColor() const {
             return float3( 24, 24, 22 );
-        }
-        float3 GetLightDir() const {
-            return float3( 0, -1, 0 );
         }
         void FindNearest( Ray& ray ) const
         {
