@@ -14,7 +14,7 @@ void Renderer::Init() {
 // -----------------------------------------------------------
 float3 Renderer::Trace( Ray& ray, int depth ) {
     if ( depth == 0 ) {
-        return 0;
+        return float3( 0 );
     }
 
     // intersect the ray with the scene
@@ -40,6 +40,37 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
     return color;
 }
 
+float3 Renderer::newTrace( Ray& ray, int depth ) {
+    bool continues;
+    float3 result = float3( 1.0f );
+    for ( int d = depth; d >= 0; d-- ) {
+        scene.FindNearest( ray );
+
+        // if we hit nothing return black
+        if ( ray.objIdx == -1 ) {
+            float t = 0.5f * ( ray.D.y + 1.0f );
+            result *= ( 1.0f - t ) * float3( 1.0f, 1.0f, 1.0f ) + t * float3( 0.5f, 0.7f, 1.0f );
+            break;
+            //return float3( 0 );
+        }
+
+        // fetch intersection point, normal and material
+        float3 I = ray.O + ray.t * ray.D;
+        float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
+        shared_ptr<ObjectMaterial> mat = scene.GetMaterial( ray.objIdx );
+
+        float3 color;
+        Ray ray_out;
+        continues = mat->bounce( ray, I, N, color, ray_out );
+        result *= color;
+        if ( !continues ) break;
+
+        ray = ray_out;
+    }
+
+    return result;
+}
+
 // -----------------------------------------------------------
 // Main application tick function - Executed once per frame
 // -----------------------------------------------------------
@@ -49,7 +80,7 @@ void Renderer::Tick( float deltaTime ) {
     // move the camera based on inputs given
     bool stationary = abs(yaw) < FLT_EPSILON && abs(pitch) < FLT_EPSILON && abs(roll) < FLT_EPSILON 
         && abs(xMove) < FLT_EPSILON && abs(yMove) < FLT_EPSILON && abs(zMove) < FLT_EPSILON;
-    bool animation = false; // Set to true for motion blur
+    bool animation = false; // Set to true for animation with motion blur
 
     if (!stationary) camera.AdjustCamera(yaw, pitch, roll, xMove, yMove, zMove);
     // pixel loop
@@ -59,13 +90,11 @@ void Renderer::Tick( float deltaTime ) {
     for ( int y = 0; y < SCRHEIGHT; y++ ) {
         // trace a primary ray for each pixel on the line
         for ( int x = 0; x < SCRWIDTH; x++ ) {
-            Ray ray;
             int samples;
             float3 result = float3( 0 );
-            for ( samples = 0; samples < 1; samples++ ) { // iterate to 1 to disable anti-aliasing
+            for ( samples = 0; samples < 1; samples++ ) { // iterate to 1 to disable anti-aliasing, going higher will drastically impact performance
                 if ( animation ) scene.SetTime( animTime + Rand( deltaTime * 0.002f ) );
-                ray = camera.GetPrimaryRay( x, y );
-                result += Trace( ray );
+                result += newTrace( camera.GetPrimaryRay( x, y ) );
             }
 
             int accIdx = x + y * SCRWIDTH;

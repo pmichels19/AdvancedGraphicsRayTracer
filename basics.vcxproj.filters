@@ -18,12 +18,38 @@
     <ClInclude Include="template\precomp.h">
       <Filter>template</Filter>
     </ClInclude>
-    <ClInclude Include="Material.h" />
-    <ClInclude Include="Checkboard.h" />
+    <ClInclude Include="Ray.h" />
+    <ClInclude Include="Checkerboard.h">
+      <Filter>Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="Diffuse.h">
+      <Filter>Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="Dielectric.h">
+      <Filter>Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="Light.h">
+      <Filter>Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="DSMix.h">
+      <Filter>Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="Mirror.h">
+      <Filter>Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureMaterial.h">
+      <Filter>Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjectMaterial.h">
+      <Filter>Materials</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">
       <UniqueIdentifier>{a7d6e3cb-bfcd-438d-979f-17df241a55b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Materials">
+      <UniqueIdentifier>{905e6d81-c9db-4997-b900-86cedf72936e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

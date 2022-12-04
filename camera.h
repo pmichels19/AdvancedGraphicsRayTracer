@@ -17,10 +17,6 @@ namespace Tmpl8 {
             bottomLeft  = matrix.TransformPoint( bottomLeft );
         }
 
-        float random_float( const float min, const float max ) {
-            return min + ( max - min ) * rand() / ( RAND_MAX + 1.0f );
-        }
-
         float3 randomInUnitDisk() {
             while ( true ) {
                 float3 p = float3( random_float( -1, 1 ), random_float( -1, 1 ), 0 );

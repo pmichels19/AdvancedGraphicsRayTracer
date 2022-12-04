@@ -363,6 +363,8 @@ namespace Tmpl8 {
             diamond = make_shared<Dielectric>( Dielectric( float3( 4.0f, 1.0f, 0.7f ), 2.42f ) );
 
             lamp = make_shared<Light>( Light( float3( 24.0f, 24.0f, 22.0f ), float3( 0.0f, -1.0f, 0.0f ) ) );
+
+            texture = make_shared<TextureMaterial>( TextureMaterial( "assets/spodermin.png", 1.0f, 300, 250, 6.0f, 5.0f ) );
             // we store all primitives in one continuous buffer
             quad = Quad( 0, 1 );									// 0: light source
             sphere = Sphere( 1, float3( 0 ), 0.5f );				// 1: bouncing ball
@@ -406,7 +408,7 @@ namespace Tmpl8 {
                 case 8:     // front wall
                     return white;
                 case 9:     // back wall
-                    return green;
+                    return texture;
                 case 10:    // triangle
                     return mirror;
                 default:
@@ -544,6 +546,8 @@ namespace Tmpl8 {
         shared_ptr<ObjectMaterial> diamond;
 
         shared_ptr<ObjectMaterial> lamp;
+
+        shared_ptr<ObjectMaterial> texture;
     };
 
 }
