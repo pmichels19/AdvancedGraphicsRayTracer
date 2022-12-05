@@ -353,7 +353,7 @@ namespace Tmpl8 {
             blue    = make_shared<Diffuse>( Diffuse( float3( 0.0f, 0.0f, 1.0f ) ) );
             white   = make_shared<Diffuse>( Diffuse( float3( 1.0f, 1.0f, 1.0f ) ) );
 
-            mirror  = make_shared<Mirror>( Mirror( float3( 1.0f, 1.0f, 1.0f ) ) );
+            mirror  = make_shared<Mirror>( Mirror( float3( 0.9f, 0.9f, 0.9f ) ) );
 
             mix     = make_shared<DSMix>( DSMix( float3( 0.9f, 0.2f, 0.1f ), 0.5f ) );
 
@@ -394,7 +394,7 @@ namespace Tmpl8 {
                 case 2:     // rounded corners
                     return green;
                 case 3:     // cube
-                    return mirror;
+                    return diamond;
                 case 4:     // left wall
                     return green;
                 case 5:     // right wall
@@ -411,7 +411,7 @@ namespace Tmpl8 {
                     return mix;
                 default:
                     if ( tet.hasObject( objIdx ) != -1 ) {
-                        return diamond;
+                        return mirror;
                     }
 
                     printf( "This should be unreachable - scene, getMaterial()\n" );
