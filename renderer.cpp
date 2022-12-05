@@ -50,8 +50,8 @@ float3 Renderer::newTrace( Ray& ray, int depth ) {
         if ( ray.objIdx == -1 ) {
             float t = 0.5f * ( ray.D.y + 1.0f );
             result *= ( 1.0f - t ) * float3( 1.0f, 1.0f, 1.0f ) + t * float3( 0.5f, 0.7f, 1.0f );
+            //result *= float3( 0 );
             break;
-            //return float3( 0 );
         }
 
         // fetch intersection point, normal and material
