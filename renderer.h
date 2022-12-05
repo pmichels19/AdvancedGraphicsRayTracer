@@ -7,7 +7,6 @@ namespace Tmpl8 {
         // game flow methods
         void Init();
         float3 Trace( Ray& ray, int depth = 50 );
-        float3 newTrace( Ray& ray, int depth = 50 );
 
         void Tick( float deltaTime );
 
