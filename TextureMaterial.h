@@ -18,8 +18,8 @@ public:
     }
 
     virtual bool bounce( const Ray& ray_in, const float3 I, const float3 N, float3& attenuation, Ray& ray_out ) const override {
-        uint u = texture->width * ray_in.u;
-        uint v = texture->height * ray_in.v;
+        uint u = (int) ( texture->width * ray_in.u ) % texture->width;
+        uint v = (int) ( texture->height * ray_in.v ) % texture->height;
         uint skyIdx = ( u & ( texture->width - 1 ) ) + ( v & ( texture->height - 1 ) ) * texture->width;
         uint p = texture->pixels[skyIdx];
         uint3 i3( ( p >> 16 ) & 255, ( p >> 8 ) & 255, p & 255 );

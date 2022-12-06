@@ -92,7 +92,21 @@ namespace Tmpl8 {
         void Intersect( Ray& ray ) const
         {
             float t = -( dot( ray.O, this->N ) + this->d ) / ( dot( ray.D, this->N ) );
-            if ( t < ray.t && t > EPS ) ray.t = t, ray.objIdx = objIdx;
+            if ( t < ray.t && t > EPS ) {
+                ray.t = t;
+                ray.objIdx = objIdx;
+                float3 I = ray.IntersectionPoint();
+                if ( N.x < FLT_EPSILON && N.y < FLT_EPSILON ) {
+                    ray.u = I.x;
+                    ray.v = -I.y;
+                } else if ( N.x < FLT_EPSILON && N.z < FLT_EPSILON ) {
+                    ray.u = I.x;
+                    ray.v = -I.z;
+                } else if ( N.y < FLT_EPSILON && N.z < FLT_EPSILON ) {
+                    ray.u = I.y;
+                    ray.v = -I.z;
+                }
+            }
         }
         float3 GetNormal( const float3 I ) const
         {
@@ -268,6 +282,8 @@ namespace Tmpl8 {
             if ( t < ray.t && t > EPS ) {
                 ray.t = t;
                 ray.objIdx = objIdx;
+                ray.u = u;
+                ray.v = v;
             }
         }
 
@@ -403,7 +419,7 @@ namespace Tmpl8 {
                 case 2:     // rounded corners
                     return green;
                 case 3:     // cube
-                    return mirror;
+                    return diamond;
                 case 4:     // left wall
                     return green;
                 case 5:     // right wall
@@ -420,7 +436,7 @@ namespace Tmpl8 {
                     return mix;
                 default:
                     if ( tet.hasObject( objIdx ) != -1 ) {
-                        return diamond;
+                        return mirror;
                     }
 
                     printf( "This should be unreachable - scene, getMaterial()\n" );
@@ -460,8 +476,8 @@ namespace Tmpl8 {
             //if ( ray.D.x < 0 ) PLANE_X( 3, 4 ) else PLANE_X( -2.99f, 5 );
             //if ( ray.D.y < 0 ) PLANE_Y( 1, 6 ) else PLANE_Y( -2, 7 );
             //if ( ray.D.z < 0 ) PLANE_Z( 3, 8 ) else PLANE_Z( -3.99f, 9 );
-            //if ( ray.D.z > 0 ) PLANE_Z( -3.99f, 9 ); // green wall in the back
-            //if ( ray.D.y < 0 ) PLANE_Y( 1, 6 ); // toggle on for nice checkerboard floor
+            plane[2].Intersect( ray );
+            plane[5].Intersect( ray );
             quad.Intersect( ray );
             sphere.Intersect( ray );
             //sphere2.Intersect( ray );
