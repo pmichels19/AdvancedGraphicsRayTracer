@@ -464,7 +464,7 @@ namespace Tmpl8 {
                 case 0:     // light panel
                     return lamp;
                 case 1:     // bouncing ball
-                    return diamond;
+                    return earth;
                 case 2:     // rounded corners
                     return green;
                 case 3:     // cube
@@ -504,7 +504,7 @@ namespace Tmpl8 {
             // cube animation: spin
             mat4 M2base = mat4::RotateX( PI / 4 ) * mat4::RotateZ( PI / 4 );
             mat4 M2 = mat4::Translate( float3( 1.4f, 0, 2 ) ) * mat4::RotateY( animTime * 0.5f ) * M2base;
-            //cube.M = M2, cube.invM = M2.FastInvertedTransformNoScale();
+            cube.M = M2, cube.invM = M2.FastInvertedTransformNoScale();
             // sphere animation: bounce
             float tm = 1 - sqrf( fmodf( animTime, 2.0f ) - 1 );
             sphere.pos = float3( -1.4f, -0.5f + tm, 2 );
@@ -532,7 +532,7 @@ namespace Tmpl8 {
             //sphere2.Intersect( ray );
             cube.Intersect( ray );
             triangle.Intersect(ray);
-            //tet.Intersect(ray);
+            tet.Intersect(ray);
         }
         bool IsOccluded( Ray& ray ) const
         {
