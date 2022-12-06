@@ -380,7 +380,6 @@ namespace Tmpl8 {
             int modelObjIndices = 10000;
             mat4 tetRotation = mat4::RotateX(0.5 * PI) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI );
             tet = ObjModel("assets/tetrahedron.obj", modelObjIndices, 1.0f / 100.0f, float3( 0 , 0.5f, 0.5f ), tetRotation );
-            printf("%d\n", modelObjIndices);
             SetTime( 0 );
             // Note: once we have triangle support we should get rid of the class
             // hierarchy: virtuals reduce performance somewhat.
@@ -451,8 +450,8 @@ namespace Tmpl8 {
             //if ( ray.D.x < 0 ) PLANE_X( 3, 4 ) else PLANE_X( -2.99f, 5 );
             //if ( ray.D.y < 0 ) PLANE_Y( 1, 6 ) else PLANE_Y( -2, 7 );
             //if ( ray.D.z < 0 ) PLANE_Z( 3, 8 ) else PLANE_Z( -3.99f, 9 );
-            if ( ray.D.z > 0 ) PLANE_Z( -3.99f, 9 );
-            if ( ray.D.y < 0 ) PLANE_Y( 1, 6 );
+            //if ( ray.D.z > 0 ) PLANE_Z( -3.99f, 9 ); // green wall in the back
+            //if ( ray.D.y < 0 ) PLANE_Y( 1, 6 ); // toggle on for nice checkerboard floor
             quad.Intersect( ray );
             sphere.Intersect( ray );
             //sphere2.Intersect( ray );

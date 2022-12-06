@@ -1646,6 +1646,7 @@ public:
 	virtual void KeyUp( int key ) = 0;
 	virtual void KeyDown( int key ) = 0;
 	Surface* screen = 0;
+	const Surface* skydome = 0;
 };
 
 #define EPS 0.0001f
