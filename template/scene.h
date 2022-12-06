@@ -176,10 +176,59 @@ namespace Tmpl8 {
             tmin = max( tmin, tzmin ), tmax = min( tmax, tzmax );
             if ( tmin > EPS )
             {
-                if ( tmin < ray.t ) ray.t = tmin, ray.objIdx = objIdx;
+                if ( tmin < ray.t ) ray.t = tmin, ray.objIdx = objIdx, setTextureCoords( ray );
             } else if ( tmax > EPS )
             {
-                if ( tmax < ray.t ) ray.t = tmax, ray.objIdx = objIdx;
+                if ( tmax < ray.t ) ray.t = tmax, ray.objIdx = objIdx, setTextureCoords( ray );
+            }
+        }
+        void setTextureCoords( Ray& ray ) const {
+            // transform intersection point to object space
+            float3 objI = TransformPosition( ray.IntersectionPoint(), invM);
+            float uc, vc;
+
+            float d0 = fabs( objI.x - b[0].x ), d1 = fabs( objI.x - b[1].x );
+            float d2 = fabs( objI.y - b[0].y ), d3 = fabs( objI.y - b[1].y );
+            float d4 = fabs( objI.z - b[0].z ), d5 = fabs( objI.z - b[1].z );
+            float minDist = d0;
+            int face = 1;
+            uc = objI.z, vc = objI.y;
+            if ( d1 < minDist ) uc = -objI.z, vc =  objI.y, face = 0, minDist = d1;
+            if ( d2 < minDist ) uc =  objI.x, vc =  objI.z, face = 3, minDist = d2;
+            if ( d3 < minDist ) uc =  objI.x, vc = -objI.z, face = 2, minDist = d3;
+            if ( d4 < minDist ) uc = -objI.x, vc =  objI.y, face = 5, minDist = d4;
+            if ( d5 < minDist ) uc =  objI.x, vc =  objI.y, face = 4;
+
+            // Convert range from -1 to 1 to 0 to 1
+            uc = -uc, vc = -vc;
+            uc = 0.5f * ( uc / b[1].x + 1.0f );
+            vc = 0.5f * ( vc / b[1].x + 1.0f );
+
+            switch ( face ) {
+                case 0: // right
+                    ray.u = 0.25f * ( 2 + uc );
+                    ray.v = ( 1.0f / 3.0f ) * ( 1 + vc );
+                    break;
+                case 1: // left
+                    ray.u = 0.25f * ( 0 + uc );
+                    ray.v = ( 1.0f / 3.0f ) * ( 1 + vc );
+                    break;
+                case 2: // top
+                    ray.u = 0.25f * ( 1 + uc );
+                    ray.v = ( 1.0f / 3.0f ) * vc;
+                    break;
+                case 3: // bottom
+                    ray.u = 0.25f * ( 1 + uc );
+                    ray.v = ( 1.0f / 3.0f ) * ( 2 + vc );
+                    break;
+                case 4: // front
+                    ray.u = 0.25f * ( 1 + uc );
+                    ray.v = ( 1.0f / 3.0f ) * ( 1 + vc );
+                    break;
+                case 5: // back
+                    ray.u = 0.25f * ( 3 + uc );
+                    ray.v = ( 1.0f / 3.0f ) * ( 1 + vc );
+                    break;
             }
         }
         float3 GetNormal( const float3 I ) const
@@ -388,7 +437,7 @@ namespace Tmpl8 {
 
             lamp = make_shared<Light>( Light( float3( 24.0f, 24.0f, 22.0f ), float3( 0.0f, -1.0f, 0.0f ) ) );
             
-            texture = make_shared<TextureMaterial>( TextureMaterial( "assets/earth.png" ) );
+            earth = make_shared<TextureMaterial>( TextureMaterial( "assets/earth.png" ) );
             // we store all primitives in one continuous buffer
             quad = Quad( 0, 1 );									// 0: light source
             sphere = Sphere( 1, float3( 0 ), 0.5f );				// 1: bouncing ball
@@ -415,11 +464,11 @@ namespace Tmpl8 {
                 case 0:     // light panel
                     return lamp;
                 case 1:     // bouncing ball
-                    return texture;
+                    return diamond;
                 case 2:     // rounded corners
                     return green;
                 case 3:     // cube
-                    return diamond;
+                    return earth;
                 case 4:     // left wall
                     return green;
                 case 5:     // right wall
@@ -455,7 +504,7 @@ namespace Tmpl8 {
             // cube animation: spin
             mat4 M2base = mat4::RotateX( PI / 4 ) * mat4::RotateZ( PI / 4 );
             mat4 M2 = mat4::Translate( float3( 1.4f, 0, 2 ) ) * mat4::RotateY( animTime * 0.5f ) * M2base;
-            cube.M = M2, cube.invM = M2.FastInvertedTransformNoScale();
+            //cube.M = M2, cube.invM = M2.FastInvertedTransformNoScale();
             // sphere animation: bounce
             float tm = 1 - sqrf( fmodf( animTime, 2.0f ) - 1 );
             sphere.pos = float3( -1.4f, -0.5f + tm, 2 );
@@ -477,13 +526,13 @@ namespace Tmpl8 {
             //if ( ray.D.y < 0 ) PLANE_Y( 1, 6 ) else PLANE_Y( -2, 7 );
             //if ( ray.D.z < 0 ) PLANE_Z( 3, 8 ) else PLANE_Z( -3.99f, 9 );
             plane[2].Intersect( ray );
-            plane[5].Intersect( ray );
+            //plane[5].Intersect( ray );
             quad.Intersect( ray );
             sphere.Intersect( ray );
             //sphere2.Intersect( ray );
             cube.Intersect( ray );
             triangle.Intersect(ray);
-            tet.Intersect(ray);
+            //tet.Intersect(ray);
         }
         bool IsOccluded( Ray& ray ) const
         {
@@ -570,7 +619,7 @@ namespace Tmpl8 {
 
         shared_ptr<ObjectMaterial> lamp;
 
-        shared_ptr<ObjectMaterial> texture;
+        shared_ptr<ObjectMaterial> earth;
     };
 
 }
