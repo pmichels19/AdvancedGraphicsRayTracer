@@ -48,13 +48,21 @@ namespace Tmpl8 {
             d = sqrtf( d ), t = -b - d;
             if ( t < ray.t && t > EPS )
             {
-                ray.t = t, ray.objIdx = objIdx;
+                ray.t = t;
+                ray.objIdx = objIdx;
+                float3 cToI = normalize( ray.IntersectionPoint() - pos );
+                ray.u = 0.5f - atan2f( cToI.z, cToI.x ) * INV2PI;
+                ray.v = 0.5f - asinf( cToI.y ) * INVPI;
                 return;
             }
             t = d - b;
             if ( t < ray.t && t > EPS )
             {
-                ray.t = t, ray.objIdx = objIdx;
+                ray.t = t;
+                ray.objIdx = objIdx;
+                float3 cToI = normalize( ray.IntersectionPoint() - pos );
+                ray.u = 0.5f - atan2f( cToI.z, cToI.x ) * INV2PI;
+                ray.v = 0.5f - asinf( cToI.y ) * INVPI;
                 return;
             }
         }
@@ -363,6 +371,8 @@ namespace Tmpl8 {
             diamond = make_shared<Dielectric>( Dielectric( float3( 4.0f, 1.0f, 0.7f ), 2.42f ) );
 
             lamp = make_shared<Light>( Light( float3( 24.0f, 24.0f, 22.0f ), float3( 0.0f, -1.0f, 0.0f ) ) );
+            
+            texture = make_shared<TextureMaterial>( TextureMaterial( "assets/earth.png" ) );
             // we store all primitives in one continuous buffer
             quad = Quad( 0, 1 );									// 0: light source
             sphere = Sphere( 1, float3( 0 ), 0.5f );				// 1: bouncing ball
@@ -389,7 +399,7 @@ namespace Tmpl8 {
                 case 0:     // light panel
                     return lamp;
                 case 1:     // bouncing ball
-                    return glass;
+                    return texture;
                 case 2:     // rounded corners
                     return green;
                 case 3:     // cube
@@ -543,6 +553,8 @@ namespace Tmpl8 {
         shared_ptr<ObjectMaterial> diamond;
 
         shared_ptr<ObjectMaterial> lamp;
+
+        shared_ptr<ObjectMaterial> texture;
     };
 
 }

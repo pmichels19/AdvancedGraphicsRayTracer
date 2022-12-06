@@ -37,10 +37,10 @@
     <ClInclude Include="Mirror.h">
       <Filter>Materials</Filter>
     </ClInclude>
-    <ClInclude Include="TextureMaterial.h">
+    <ClInclude Include="ObjectMaterial.h">
       <Filter>Materials</Filter>
     </ClInclude>
-    <ClInclude Include="ObjectMaterial.h">
+    <ClInclude Include="TextureMaterial.h">
       <Filter>Materials</Filter>
     </ClInclude>
   </ItemGroup>
