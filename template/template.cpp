@@ -132,8 +132,10 @@ void main()
 	// initialize application
 	InitRenderTarget(SCRWIDTH, SCRHEIGHT);
 	Surface* screen = new Surface(SCRWIDTH, SCRHEIGHT);
+	Surface* skydome = new Surface( "assets/skydome.hdr" );
 	app = new Renderer();
 	app->screen = screen;
+	app->skydome = skydome;
 	app->Init();
 	// done, enter main loop
 #if 1

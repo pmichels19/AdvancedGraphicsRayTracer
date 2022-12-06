@@ -18,11 +18,14 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
     for ( int d = depth; d >= 0; d-- ) {
         scene.FindNearest( ray );
 
-        // if we hit nothing return black
+        // if we hit nothing return a sky color
         if ( ray.objIdx == -1 ) {
-            float t = 0.5f * ( ray.D.y + 1.0f );
-            result *= ( 1.0f - t ) * float3( 1.0f, 1.0f, 1.0f ) + t * float3( 0.5f, 0.7f, 1.0f );
-            //result *= float3( 0 );
+            uint u = skydome->width * atan2f( ray.D.z, ray.D.x ) * INV2PI - 0.5f;
+            uint v = skydome->height * acosf( ray.D.y ) * INVPI - 0.5f;
+            uint skyIdx = ( u & ( skydome->width - 1 ) ) + ( v & ( skydome->height - 1 ) ) *skydome->width;
+            uint p = skydome->pixels[skyIdx];
+            uint3 i3( ( p >> 16 ) & 255, ( p >> 8 ) & 255, p & 255 );
+            result *= float3( i3 ) * ( 1.0f / 255.0f );
             break;
         }
 
