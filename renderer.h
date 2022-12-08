@@ -8,13 +8,40 @@ namespace Tmpl8 {
         void Init();
         float3 Trace( Ray& ray, int depth = 50 );
 
+        float3 WhittedTrace( Ray& ray, int depth = 50 );
+
         float3 skyColor( float3 D ) {
             uint u = skydome->width * atan2f( D.z, D.x ) * INV2PI - 0.5f;
             uint v = skydome->height * acosf( D.y ) * INVPI - 0.5f;
             uint skyIdx = ( u & ( skydome->width - 1 ) ) + ( v & ( skydome->height - 1 ) ) * skydome->width;
             uint p = skydome->pixels[skyIdx];
             uint3 i3( ( p >> 16 ) & 255, ( p >> 8 ) & 255, p & 255 );
-            return float3( i3 ) * SKYDOME_CORREDCTION;
+            return float3( i3 ) * SKYDOME_CORRECTION;
+        }
+
+        float3 DirectIllumination( float3 I, float3 N ) {
+            float3 result = float3( 0 );
+            int samples = 0;
+            for ( samples; samples < 4; samples++ ) {
+                float3 intersectionToLight = scene.GetLightPos() - I;
+                float distance = length( intersectionToLight );
+                intersectionToLight /= distance;
+                float dotDN = dot( intersectionToLight, N );
+
+                if ( dotDN < 0 ) {
+                    continue;
+                }
+
+                Ray toLight = Ray( I, intersectionToLight, distance - ( 2 * EPS ) );
+                // return black if no light source connects or if we are facing the occluded side of an object
+                if ( scene.IsOccluded( toLight ) ) {
+                    continue;
+                }
+
+                result += ( dotDN / ( distance * distance ) ) * scene.GetLightColor();
+            }
+
+            return result / (float) samples;
         }
 
         void Tick( float deltaTime );
@@ -75,6 +102,9 @@ namespace Tmpl8 {
             // zMove
             if ( key == 87 ) zMove += 1; // w
             if ( key == 83 ) zMove -= 1; // s
+
+            // switching ray tracer styles
+            if ( key == 75 ) useWhitted = !useWhitted, tracerSwap = true, printf( "Switching to %s.\n", useWhitted ? "Whitted style ray tracer" : "Kajiya path tracer" ); // k
         }
 
         // data members
@@ -92,6 +122,9 @@ namespace Tmpl8 {
         float zMove = 0;
 
         int stationaryFrames = 0;
+
+        bool useWhitted = false;
+        bool tracerSwap = false;
     };
 
 } // namespace Tmpl8

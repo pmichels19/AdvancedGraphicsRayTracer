@@ -12,6 +12,14 @@ public:
         return true;
     }
 
+    virtual MaterialType getFlag() const override {
+        return MaterialType::SPECULAR;
+    }
+
+    virtual float* getColorModifier( Ray& ray_in, float3 N ) const {
+        return new float[3] { color.x, color.y, color.z };
+    }
+
 private:
     float3 color;
 };

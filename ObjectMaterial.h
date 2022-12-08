@@ -4,6 +4,11 @@ class ObjectMaterial {
 public:
     virtual bool bounce( const Ray& ray_in, const float3 I, const float3 N, float3& attenuation, Ray& ray_out ) const = 0;
 
+    // WHITTED STYLE RAY TRACER SUPPORT
+    virtual MaterialType getFlag() const = 0;
+
+    virtual float* getColorModifier( Ray& ray_in, float3 N ) const = 0;
+
     // ===================================================
     // helper methods we might need in material subclasses
     // ===================================================

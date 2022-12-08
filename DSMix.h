@@ -32,6 +32,22 @@ public:
         return true;
     }
 
+    virtual MaterialType getFlag() const override {
+        if ( diffuse < FLT_EPSILON ) {
+            return MaterialType::SPECULAR;
+        }
+
+        if ( specular < FLT_EPSILON ) {
+            return MaterialType::DIFFUSE;
+        }
+
+        return MaterialType::MIX;
+    }
+
+    virtual float* getColorModifier( Ray& ray_in, float3 N ) const {
+        return new float[4] { color.x, color.y, color.z, diffuse };
+    }
+
 private:
     float3 color;
     float diffuse;

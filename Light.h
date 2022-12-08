@@ -14,6 +14,14 @@ public:
         return false;
     }
 
+    virtual MaterialType getFlag() const override {
+        return MaterialType::DIFFUSE; // we consider lights diffuse
+    }
+
+    virtual float* getColorModifier( Ray& ray_in, float3 N ) const {
+        return new float[3] { clamp( color.x, 0.0f, 1.0f ), clamp( color.y, 0.0f, 1.0f ), clamp( color.z, 0.0f, 1.0f ) };
+    }
+
 private:
     float3 color;
     float3 direction;

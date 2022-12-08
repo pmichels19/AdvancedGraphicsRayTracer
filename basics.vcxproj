@@ -135,6 +135,7 @@
     <ClInclude Include="Diffuse.h" />
     <ClInclude Include="DSMix.h" />
     <ClInclude Include="Light.h" />
+    <ClInclude Include="MaterialType.h" />
     <ClInclude Include="Mirror.h" />
     <ClInclude Include="ObjectMaterial.h" />
     <ClInclude Include="Ray.h" />

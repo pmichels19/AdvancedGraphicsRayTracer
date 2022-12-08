@@ -47,6 +47,29 @@ public:
         return true;
     }
 
+    virtual MaterialType getFlag() const override {
+        if ( diffuse < FLT_EPSILON ) {
+            return MaterialType::SPECULAR;
+        }
+
+        if ( specular < FLT_EPSILON ) {
+            return MaterialType::DIFFUSE;
+        }
+
+        return MaterialType::MIX;
+    }
+
+    virtual float* getColorModifier( Ray& ray_in, float3 N ) const {
+        uint u = texture->width * ray_in.u;
+        uint v = texture->height * ray_in.v;
+        uint skyIdx = ( u & ( texture->width - 1 ) ) + ( v & ( texture->height - 1 ) ) * texture->width;
+        uint p = texture->pixels[skyIdx];
+        uint3 i3( ( p >> 16 ) & 255, ( p >> 8 ) & 255, p & 255 );
+        float3 color = float3( i3 ) * SKYDOME_CORRECTION;
+
+        return new float[4] { color.x, color.y, color.z, diffuse };
+    }
+
     Surface* texture;
     float diffuse;
     float specular;

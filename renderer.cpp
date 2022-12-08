@@ -40,6 +40,61 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
     return result;
 }
 
+float3 Renderer::WhittedTrace( Ray& ray, int depth ) {
+    float3 result = float3( 0 );
+    if ( depth == 0 ) return result;
+
+    scene.FindNearest( ray );
+    if ( ray.objIdx == -1 ) return skyColor( ray.D );
+
+    float3 I = ray.O + ray.t * ray.D;
+    float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
+    shared_ptr<ObjectMaterial> mat = scene.GetMaterial( ray.objIdx );
+
+    MaterialType flag = mat->getFlag();
+    float* colorVars = mat->getColorModifier( ray, N );
+    if ( flag == MaterialType::DIFFUSE ) {
+        // purely diffuse
+        result += DirectIllumination( I, N );
+    } else if ( flag == MaterialType::SPECULAR ) {
+        // purely specular
+        Ray reflectionRay = Ray( I, normalize( reflect( ray.D, N ) ) );
+        result += WhittedTrace( reflectionRay, depth - 1 );
+    } else if ( flag == MaterialType::MIX ) {
+        // diffuse bit
+        result += colorVars[3] * DirectIllumination( I, N );
+        // reflection bit
+        Ray reflectionRay = Ray( I, normalize( reflect( ray.D, N ) ) );
+        result += ( 1.0f - colorVars[3] ) * WhittedTrace(reflectionRay, depth - 1);
+    } else if ( flag == MaterialType::DIELECTRIC ) {
+        if ( colorVars[3] < 0 ) {
+            // handle Total Internal Reflection (TIR), indicated by a colorModifier with values of -1
+            Ray reflectionRay = Ray( I, normalize( reflect( ray.D, N ) ) );
+            reflectionRay.inside = true;
+            result += WhittedTrace( reflectionRay, depth - 1 );
+        } else {
+            float Fr = colorVars[3];
+            float Ft = 1 - Fr;
+
+            // reflection
+            if ( Fr > FLT_EPSILON ) {
+                float3 R = normalize( reflect( ray.D, N ) );
+                Ray reflectionRay = Ray( I, R );
+                result += Fr * WhittedTrace( reflectionRay, depth - 1 );
+            }
+
+            // refraction
+            if ( Ft > FLT_EPSILON ) {
+                Ray refractionRay = Ray( I, float3( colorVars[4], colorVars[5], colorVars[6] ) );
+                refractionRay.inside = !ray.inside;
+                result += Ft * WhittedTrace( refractionRay, depth - 1 );
+            }
+        }
+    }
+
+    return float3( colorVars[0], colorVars[1], colorVars[2] ) * result;
+}
+
 // -----------------------------------------------------------
 // Main application tick function - Executed once per frame
 // -----------------------------------------------------------
@@ -48,7 +103,7 @@ void Renderer::Tick( float deltaTime ) {
     static float animTime = 0;
     // move the camera based on inputs given
     bool stationary = abs(yaw) < FLT_EPSILON && abs(pitch) < FLT_EPSILON && abs(roll) < FLT_EPSILON 
-        && abs(xMove) < FLT_EPSILON && abs(yMove) < FLT_EPSILON && abs(zMove) < FLT_EPSILON;
+        && abs(xMove) < FLT_EPSILON && abs(yMove) < FLT_EPSILON && abs(zMove) < FLT_EPSILON && !tracerSwap;
     bool animation = false; // Set to true for animation with motion blur
 
     if (!stationary) camera.AdjustCamera(yaw, pitch, roll, xMove, yMove, zMove);
@@ -63,7 +118,11 @@ void Renderer::Tick( float deltaTime ) {
             float3 result = float3( 0 );
             for ( samples = 0; samples < 1; samples++ ) { // iterate to 1 to disable anti-aliasing, going higher will drastically impact performance
                 if ( animation ) scene.SetTime( animTime + Rand( deltaTime * 0.002f ) );
-                result += Trace( camera.GetPrimaryRay( x, y ) );
+                if ( useWhitted ) {
+                    result += WhittedTrace( camera.GetPrimaryRay( x, y ) );
+                } else {
+                    result += Trace( camera.GetPrimaryRay( x, y ) );
+                }
             }
 
             int accIdx = x + y * SCRWIDTH;
@@ -82,6 +141,7 @@ void Renderer::Tick( float deltaTime ) {
     }
 
     if (animation) scene.SetTime( animTime += deltaTime * 0.002f );
+    if ( tracerSwap ) tracerSwap = !tracerSwap; // if we tossed away the accumulator this frame we want to make sure to start it again next frame with the new tracer
     // performance report - running average - ms, MRays/s
     static float avg = 10, alpha = 1;
     avg = ( 1 - alpha ) * avg + alpha * t.elapsed() * 1000;

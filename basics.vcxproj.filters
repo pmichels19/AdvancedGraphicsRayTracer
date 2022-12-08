@@ -43,6 +43,9 @@
     <ClInclude Include="TextureMaterial.h">
       <Filter>Materials</Filter>
     </ClInclude>
+    <ClInclude Include="MaterialType.h">
+      <Filter>Materials</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

@@ -39,6 +39,31 @@ public:
         return true;
     }
 
+    virtual MaterialType getFlag() const override {
+        if ( diffuse < FLT_EPSILON ) {
+            return MaterialType::SPECULAR;
+        }
+
+        if ( specular < FLT_EPSILON ) {
+            return MaterialType::DIFFUSE;
+        }
+
+        return MaterialType::MIX;
+    }
+
+    virtual float* getColorModifier( Ray& ray_in, float3 N ) const {
+        float3 I = ray_in.IntersectionPoint();
+        bool evenX = abs( ( (int) floor( I.x ) ) % 2 ) == 0;
+        bool evenZ = abs( ( (int) floor( I.z ) ) % 2 ) == 0;
+        if ( evenX == evenZ ) {
+            float results[4] = { color1.x, color1.y, color1.z, diffuse };
+            return new float[4] { color1.x, color1.y, color1.z, diffuse };
+        } else {
+            float results[4] = { color2.x, color2.y, color2.z, diffuse };
+            return new float[4] { color2.x, color2.y, color2.z, diffuse };
+        }
+    }
+
 private:
     float3 color1;
     float3 color2;
