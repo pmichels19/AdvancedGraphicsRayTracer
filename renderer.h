@@ -8,6 +8,15 @@ namespace Tmpl8 {
         void Init();
         float3 Trace( Ray& ray, int depth = 50 );
 
+        float3 skyColor( float3 D ) {
+            uint u = skydome->width * atan2f( D.z, D.x ) * INV2PI - 0.5f;
+            uint v = skydome->height * acosf( D.y ) * INVPI - 0.5f;
+            uint skyIdx = ( u & ( skydome->width - 1 ) ) + ( v & ( skydome->height - 1 ) ) * skydome->width;
+            uint p = skydome->pixels[skyIdx];
+            uint3 i3( ( p >> 16 ) & 255, ( p >> 8 ) & 255, p & 255 );
+            return float3( i3 ) * SKYDOME_CORREDCTION;
+        }
+
         void Tick( float deltaTime );
 
         void Shutdown() { /* implement if you want to do something on exit */ }

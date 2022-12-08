@@ -20,13 +20,7 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
 
         // if we hit nothing return a sky color
         if ( ray.objIdx == -1 ) {
-            uint u = skydome->width * atan2f( ray.D.z, ray.D.x ) * INV2PI - 0.5f;
-            uint v = skydome->height * acosf( ray.D.y ) * INVPI - 0.5f;
-            uint skyIdx = ( u & ( skydome->width - 1 ) ) + ( v & ( skydome->height - 1 ) ) *skydome->width;
-            uint p = skydome->pixels[skyIdx];
-            uint3 i3( ( p >> 16 ) & 255, ( p >> 8 ) & 255, p & 255 );
-            result *= float3( i3 ) * ( 1.0f / 255.0f );
-            break;
+            return result * skyColor( ray.D );
         }
 
         // fetch intersection point, normal and material
