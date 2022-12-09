@@ -440,6 +440,7 @@ namespace Tmpl8 {
         vector<Triangle> triangles;
     public:
         ObjModel() = default;
+        //ObjModel( const string fileName, uint& objIdx, mat4 transform = mat4::Identity() ) {
         ObjModel( const string fileName, uint& objIdx, const float scale = 1, const float3 offset = float3( 0 ), mat4 rotate = mat4::Identity() ) {
             ifstream in( fileName, ios::in );
             if ( !in ) {
@@ -504,6 +505,10 @@ namespace Tmpl8 {
         float3 GetAABBMax( const int idx ) const {
             return triangles[idx].GetAABBMax();
         }
+
+        void Intersect( Ray& ray, const int idx ) const {
+            triangles[idx].Intersect( ray );
+        }
     };
 
     // -----------------------------------------------------------
@@ -540,7 +545,7 @@ namespace Tmpl8 {
             // we store all primitives in one continuous buffer
             quad = Quad( primitiveCount++, 1 );									// 0: light source
             sphere = Sphere( primitiveCount++, float3( 0 ), 0.5f );				// 1: bouncing ball
-            sphere2 = Sphere( primitiveCount++, float3( 0, 2.5f, -3.07f ), 8 );	// 2: rounded corners
+            //sphere2 = Sphere( primitiveCount++, float3( 0, 2.5f, -3.07f ), 8 );	// 2: rounded corners
             cube = Cube( primitiveCount++, float3( 0 ), float3( 1.15f ) );			// 3: cube
             triangle = Triangle( primitiveCount++, float3( 0, 0, 3 ), float3( 0.5, -1, 3 ), float3( -0.5, -1, 3 ) ); // 4: triangle
             groundQuad = Quad( primitiveCount++, 50, mat4::Translate( float3( 0.0f, -1.0f, 0.0f ) ) ); // 5: ground quad
@@ -553,12 +558,12 @@ namespace Tmpl8 {
             // build BVH after objects are moved with setTime
             printf("Building BVH...\n");
             primitiveIndices = (uint*) MALLOC64( primitiveCount * sizeof( uint ) );
-            for ( int i = 0; i < primitiveCount; i++ ) {
+            for ( uint i = 0; i < primitiveCount; i++ ) {
                 primitiveIndices[i] = i;
             }
 
             bvhNode = (BVHNode*) MALLOC64( primitiveCount * sizeof( BVHNode ) );
-            nodesUsed = 1;
+            nodesUsed = 2; // skip a node because memory alignment
             BuildBVH();
             printf( "Finished BVH!\n" );
 
@@ -575,8 +580,7 @@ namespace Tmpl8 {
 
         void BuildBVH() {
             BVHNode& root = bvhNode[rootNodeIdx];
-            root.left = 0;
-            root.firstPrimitiveIdx = 0;
+            root.leftOrFirstPrimitiveIdx = 0;
             root.primitiveCount = primitiveCount;
 
             UpdateNodeBounds( rootNodeIdx );
@@ -585,6 +589,8 @@ namespace Tmpl8 {
 
         void Subdivide( uint nodeIdx ) {
             BVHNode& node = bvhNode[nodeIdx];
+            if ( node.primitiveCount <= 2 ) return;
+
             float3 extent = node.aabbMax - node.aabbMin;
             // determine longest axis which we want to split on
             int axis = 0;
@@ -593,34 +599,41 @@ namespace Tmpl8 {
             float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
 
             // split the primitives in two halves
-            int i = node.firstPrimitiveIdx;
+            int i = node.leftOrFirstPrimitiveIdx;
             int j = i + node.primitiveCount - 1;
             while ( i <= j ) {
                 float3 centroid;
                 int objIdx = primitiveIndices[ i ];
                 if ( objIdx == 0 ) centroid = quad.GetCentroid();
                 else if ( objIdx == 1 ) centroid = sphere.GetCentroid();
-                else if ( objIdx == 2 ) centroid = sphere2.GetCentroid();
-                else if ( objIdx == 3 ) centroid = cube.GetCentroid();
-                else if ( objIdx == 4 ) centroid = triangle.GetCentroid();
-                else if ( objIdx == 5 ) centroid = groundQuad.GetCentroid();
+                else if ( objIdx == 2 ) centroid = cube.GetCentroid();
+                else if ( objIdx == 3 ) centroid = triangle.GetCentroid();
+                else if ( objIdx == 4 ) centroid = groundQuad.GetCentroid();
                 else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) centroid = tet.GetCentroid( tetIdx );
 
                 if ( centroid[axis] < splitPos ) i++;
                 else swap( primitiveIndices[ i ], primitiveIndices[ j-- ] );
             }
             
-            int leftCount = i - node.firstPrimitiveIdx;
+            // abort if one of the sides of the split is empty
+            int leftCount = i - node.leftOrFirstPrimitiveIdx;
             if ( leftCount == 0 || leftCount == node.primitiveCount ) return;
             // create child nodes
             int leftChildIdx = nodesUsed++;
             int rightChildIdx = nodesUsed++;
-            node.left = leftChildIdx;
-            bvhNode[leftChildIdx].firstPrimitiveIdx = node.firstPrimitiveIdx;
+            bvhNode[leftChildIdx].leftOrFirstPrimitiveIdx = node.leftOrFirstPrimitiveIdx;
             bvhNode[leftChildIdx].primitiveCount = leftCount;
-            bvhNode[rightChildIdx].firstPrimitiveIdx = i;
+            bvhNode[rightChildIdx].leftOrFirstPrimitiveIdx = i;
             bvhNode[rightChildIdx].primitiveCount = node.primitiveCount - leftCount;
+            // update the (now parent) node
+            node.leftOrFirstPrimitiveIdx = leftChildIdx;
             node.primitiveCount = 0;
+            // set the aabb's for both children
+            UpdateNodeBounds( leftChildIdx );
+            UpdateNodeBounds( rightChildIdx );
+            // see if we should subdivide those as well
+            Subdivide( leftChildIdx );
+            Subdivide( rightChildIdx );
         }
 
         void UpdateNodeBounds( uint nodeIdx ) const {
@@ -638,15 +651,12 @@ namespace Tmpl8 {
                     node.aabbMin = fminf( node.aabbMin, sphere.GetAABBMin() );
                     node.aabbMax = fmaxf( node.aabbMax, sphere.GetAABBMax() );
                 } else if ( objIdx == 2 ) {
-                    node.aabbMin = fminf( node.aabbMin, sphere2.GetAABBMin() );
-                    node.aabbMax = fmaxf( node.aabbMax, sphere.GetAABBMax() );
-                } else if ( objIdx == 3 ) {
                     node.aabbMin = fminf( node.aabbMin, cube.GetAABBMin() );
                     node.aabbMax = fmaxf( node.aabbMax, cube.GetAABBMax() );
-                } else if ( objIdx == 4 ) {
+                } else if ( objIdx == 3 ) {
                     node.aabbMin = fminf( node.aabbMin, triangle.GetAABBMin() );
                     node.aabbMax = fmaxf( node.aabbMax, triangle.GetAABBMax() );
-                } else if ( objIdx == 5 ) {
+                } else if ( objIdx == 4 ) {
                     node.aabbMin = fminf( node.aabbMin, groundQuad.GetAABBMin() );
                     node.aabbMax = fmaxf( node.aabbMax, groundQuad.GetAABBMax() );
                 } else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) {
@@ -662,13 +672,11 @@ namespace Tmpl8 {
                     return lamp;
                 case 1:     // bouncing ball
                     return earth;
-                case 2:     // rounded corners
-                    return green;
-                case 3:     // cube
+                case 2:     // cube
                     return diamond;
-                case 4:    // triangle
+                case 3:    // triangle
                     return mix;
-                case 5:    // ground quad
+                case 4:    // ground quad
                     return checkerboard;
                 default:
                     if ( tet.hasObject( objIdx ) != -1 ) {
@@ -707,8 +715,7 @@ namespace Tmpl8 {
         float3 GetLightDir() const {
             return float3( 0.0f, -1.0f, 0.0f );
         }
-        void FindNearest( Ray& ray ) const
-        {
+        void FindNearest( Ray& ray ) const {
             // room walls - ugly shortcut for more speed
             float t;
             //if ( ray.D.x < 0 ) PLANE_X( 3, 4 ) else PLANE_X( -2.99f, 5 );
@@ -719,11 +726,49 @@ namespace Tmpl8 {
             quad.Intersect( ray );
             groundQuad.Intersect( ray );
             sphere.Intersect( ray );
-            //sphere2.Intersect( ray );
             cube.Intersect( ray );
             triangle.Intersect(ray);
             tet.Intersect(ray);
         }
+
+        void IntersectBVH( Ray& ray, const uint nodeIdx ) const {
+            BVHNode& node = bvhNode[nodeIdx];
+            if ( !IntersectAABB( ray, node.aabbMin, node.aabbMax) ) return;
+            if ( node.isLeaf() ) {
+                for ( uint i = 0; i < node.primitiveCount; i++ ) {
+                    int objIdx = primitiveIndices[i];
+                    if ( objIdx == 0 ) quad.Intersect( ray );
+                    else if ( objIdx == 1 ) sphere.Intersect( ray );
+                    else if ( objIdx == 2 ) cube.Intersect( ray );
+                    else if ( objIdx == 3 ) triangle.Intersect( ray );
+                    else if ( objIdx == 4 ) groundQuad.Intersect( ray );
+                    else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) tet.Intersect( ray, tetIdx );
+                }
+            } else {
+                IntersectBVH( ray, node.leftOrFirstPrimitiveIdx );
+                IntersectBVH( ray, node.leftOrFirstPrimitiveIdx + 1 );
+            }
+        }
+
+        bool IntersectAABB( const Ray& ray, const float3 bmin, const float3 bmax ) const {
+            float tx1 = ( bmin.x - ray.O.x ) / ray.D.x;
+            float tx2 = ( bmax.x - ray.O.x ) / ray.D.x;
+            float tmin = min( tx1, tx2 );
+            float tmax = max( tx1, tx2 );
+
+            float ty1 = ( bmin.y - ray.O.y ) / ray.D.y;
+            float ty2 = ( bmax.y - ray.O.y ) / ray.D.y;
+            tmin = max( tmin, min( ty1, ty2 ) );
+            tmax = min( tmax, max( ty1, ty2 ) );
+
+            float tz1 = ( bmin.z - ray.O.z ) / ray.D.z;
+            float tz2 = ( bmax.z - ray.O.z ) / ray.D.z;
+            tmin = max( tmin, min( tz1, tz2 ) );
+            tmax = min( tmax, max( tz1, tz2 ) );
+
+            return tmax >= tmin && tmin < ray.t && tmax > 0;
+        }
+
         bool IsOccluded( Ray& ray ) const {
             float rayLength = ray.t;
             // skip planes: it is not possible for the walls to occlude anything
@@ -750,10 +795,9 @@ namespace Tmpl8 {
             if ( modelTriangle != -1 ) N = tet.GetNormal( modelTriangle, I );
             else if ( objIdx == 0 ) N = quad.GetNormal( I );
             else if ( objIdx == 1 ) N = sphere.GetNormal( I );
-            else if ( objIdx == 2 ) N = sphere2.GetNormal( I );
-            else if ( objIdx == 3 ) N = cube.GetNormal( I );
-            else if ( objIdx == 4 ) N = triangle.GetNormal( I );
-            else if ( objIdx == 5 ) N = groundQuad.GetNormal( I );
+            else if ( objIdx == 2 ) N = cube.GetNormal( I );
+            else if ( objIdx == 3 ) N = triangle.GetNormal( I );
+            else if ( objIdx == 4 ) N = groundQuad.GetNormal( I );
             else {
                 // faster to handle the 6 planes without a call to GetNormal
                 N = float3( 0 );
@@ -767,10 +811,9 @@ namespace Tmpl8 {
             if ( objIdx == -1 ) return float3( 0 ); // or perhaps we should just crash
             if ( objIdx == 0 ) return quad.GetAlbedo( I );
             if ( objIdx == 1 ) return sphere.GetAlbedo( I );
-            if ( objIdx == 2 ) return sphere2.GetAlbedo( I );
-            if ( objIdx == 3 ) return cube.GetAlbedo( I );
-            else if ( objIdx == 4 ) return triangle.GetAlbedo( I );
-            if ( objIdx == 5 ) return groundQuad.GetAlbedo( I );
+            if ( objIdx == 2 ) return cube.GetAlbedo( I );
+            if ( objIdx == 3 ) return triangle.GetAlbedo( I );
+            if ( objIdx == 4 ) return groundQuad.GetAlbedo( I );
             return plane[objIdx - 4].GetAlbedo( I );
             // once we have triangle support, we should pass objIdx and the bary-
             // centric coordinates of the hit, instead of the intersection location.

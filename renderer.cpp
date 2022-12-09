@@ -16,7 +16,8 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
     bool continues;
     float3 result = float3( 1.0f );
     for ( int d = depth; d >= 0; d-- ) {
-        scene.FindNearest( ray );
+        //scene.FindNearest( ray );
+        scene.IntersectBVH( ray, 0 );
 
         // if we hit nothing return a sky color
         if ( ray.objIdx == -1 ) {
@@ -149,5 +150,5 @@ void Renderer::Tick( float deltaTime ) {
     avg = ( 1 - alpha ) * avg + alpha * t.elapsed() * 1000;
     if ( alpha > 0.05f ) alpha *= 0.5f;
     float fps = 1000 / avg, rps = ( SCRWIDTH * SCRHEIGHT ) * fps;
-    //printf( "%5.2fms (%.1fps) - %.1fMrays/s\n", avg, fps, rps / 1000000 );
+    printf( "%5.2fms (%.1fps) - %.1fMrays/s\n", avg, fps, rps / 1000000 );
 }

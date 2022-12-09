@@ -3,8 +3,7 @@
 struct BVHNode {
     float3 aabbMin;
     float3 aabbMax;
-    uint left;
-    uint firstPrimitiveIdx;
+    uint leftOrFirstPrimitiveIdx;
     uint primitiveCount;
 
     bool isLeaf() {
