@@ -440,8 +440,8 @@ namespace Tmpl8 {
         vector<Triangle> triangles;
     public:
         ObjModel() = default;
-        //ObjModel( const string fileName, uint& objIdx, mat4 transform = mat4::Identity() ) {
-        ObjModel( const string fileName, uint& objIdx, const float scale = 1, const float3 offset = float3( 0 ), mat4 rotate = mat4::Identity() ) {
+        ObjModel( const string fileName, uint& objIdx, mat4 transform = mat4::Identity() ) {
+        //ObjModel( const string fileName, uint& objIdx, const float scale = 1, const float3 offset = float3( 0 ), mat4 rotate = mat4::Identity() ) {
             ifstream in( fileName, ios::in );
             if ( !in ) {
                 printf( "Couldn't open OBJ file.\n" );
@@ -457,7 +457,8 @@ namespace Tmpl8 {
                     float x, y, z;
                     v >> x; v >> y; v >> z;
                     vert = float3( x, y, z );
-                    vertices.push_back( rotate.TransformPoint( vert * scale + offset ) );
+                    // vertices.push_back( rotate.TransformPoint( vert * scale + offset ) );
+                    vertices.push_back( TransformPosition( vert, transform ) );
                 } else if ( line.substr( 0, 2 ) == "f " ) {
                     //check f for faces
                     int a, b, c;
@@ -550,8 +551,11 @@ namespace Tmpl8 {
             triangle = Triangle( primitiveCount++, float3( 0, 0, 3 ), float3( 0.5, -1, 3 ), float3( -0.5, -1, 3 ) ); // 4: triangle
             groundQuad = Quad( primitiveCount++, 50, mat4::Translate( float3( 0.0f, -1.0f, 0.0f ) ) ); // 5: ground quad
 
-            mat4 tetRotation = mat4::RotateX( 0.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI );
-            tet = ObjModel( "assets/tetrahedron.obj", primitiveCount, 1.0f / 100.0f, float3( 0, 0.5f, 0.5f ), tetRotation );
+            mat4 tetTransform = 
+                mat4::Translate( float3( 0, 0.5f, 0.5f ) ) * 
+                mat4::RotateX( 0.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI ) * 
+                mat4::Scale( 0.01f );
+            tet = ObjModel( "assets/tetrahedron.obj", primitiveCount, tetTransform );
 
             SetTime( 0 );
 
