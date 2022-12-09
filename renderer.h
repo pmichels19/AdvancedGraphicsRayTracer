@@ -8,7 +8,7 @@ namespace Tmpl8 {
         void Init();
         float3 Trace( Ray& ray, int depth = 50 );
 
-        float3 WhittedTrace( Ray& ray, int depth = 50 );
+        float3 WhittedTrace( Ray& ray, int depth = 20 );
 
         float3 skyColor( float3 D ) {
             uint u = skydome->width * atan2f( D.z, D.x ) * INV2PI - 0.5f;
@@ -31,6 +31,8 @@ namespace Tmpl8 {
                 if ( dotDN < 0 ) {
                     continue;
                 }
+
+                if ( dot( scene.GetLightDir(), intersectionToLight ) > 0 ) continue;
 
                 Ray toLight = Ray( I, intersectionToLight, distance - ( 2 * EPS ) );
                 // return black if no light source connects or if we are facing the occluded side of an object

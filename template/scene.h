@@ -27,12 +27,12 @@
 namespace Tmpl8 {
 
     __declspec( align( 64 ) )
-    // -----------------------------------------------------------
-    // Sphere primitive
-    // Basic sphere, with explicit support for rays that start
-    // inside it. Good candidate for a dielectric material.
-    // -----------------------------------------------------------
-    class Sphere
+        // -----------------------------------------------------------
+        // Sphere primitive
+        // Basic sphere, with explicit support for rays that start
+        // inside it. Good candidate for a dielectric material.
+        // -----------------------------------------------------------
+        class Sphere
     {
     public:
         Sphere() = default;
@@ -74,6 +74,20 @@ namespace Tmpl8 {
         {
             return float3( 0.93f );
         }
+
+        // BVH building stuff
+        float3 GetCentroid() const {
+            return pos;
+        }
+
+        float3 GetAABBMin() const {
+            return pos - float3( r2 * invr );
+        }
+
+        float3 GetAABBMax() const {
+            return pos + float3( r2 * invr );
+        }
+
         float3 pos = 0;
         float r2 = 0, invr = 0;
         int objIdx = -1;
@@ -184,7 +198,7 @@ namespace Tmpl8 {
         }
         void setTextureCoords( Ray& ray ) const {
             // transform intersection point to object space
-            float3 objI = TransformPosition( ray.IntersectionPoint(), invM);
+            float3 objI = TransformPosition( ray.IntersectionPoint(), invM );
             float uc, vc;
 
             float d0 = fabs( objI.x - b[0].x ), d1 = fabs( objI.x - b[1].x );
@@ -193,11 +207,11 @@ namespace Tmpl8 {
             float minDist = d0;
             int face = 1;
             uc = objI.z, vc = objI.y;
-            if ( d1 < minDist ) uc = -objI.z, vc =  objI.y, face = 0, minDist = d1;
-            if ( d2 < minDist ) uc =  objI.x, vc =  objI.z, face = 3, minDist = d2;
-            if ( d3 < minDist ) uc =  objI.x, vc = -objI.z, face = 2, minDist = d3;
-            if ( d4 < minDist ) uc = -objI.x, vc =  objI.y, face = 5, minDist = d4;
-            if ( d5 < minDist ) uc =  objI.x, vc =  objI.y, face = 4;
+            if ( d1 < minDist ) uc = -objI.z, vc = objI.y, face = 0, minDist = d1;
+            if ( d2 < minDist ) uc = objI.x, vc = objI.z, face = 3, minDist = d2;
+            if ( d3 < minDist ) uc = objI.x, vc = -objI.z, face = 2, minDist = d3;
+            if ( d4 < minDist ) uc = -objI.x, vc = objI.y, face = 5, minDist = d4;
+            if ( d5 < minDist ) uc = objI.x, vc = objI.y, face = 4;
 
             // Convert range from -1 to 1 to 0 to 1
             uc = -uc, vc = -vc;
@@ -253,6 +267,38 @@ namespace Tmpl8 {
         {
             return float3( 1, 1, 1 );
         }
+
+        // BVH building stuff
+        float3 GetCentroid() const {
+            return TransformPosition( ( b[0] + b[1] ) * 0.5f, M );
+        }
+
+        float3 GetAABBMin() const {
+            float3 minPoint = TransformPosition( b[0], M );
+            minPoint = fminf( minPoint, TransformPosition( float3( b[1].x, b[0].y, b[0].z ), M ) );
+            minPoint = fminf( minPoint, TransformPosition( float3( b[0].x, b[1].y, b[0].z ), M ) );
+            minPoint = fminf( minPoint, TransformPosition( float3( b[0].x, b[0].y, b[1].z ), M ) );
+
+            minPoint = fminf( minPoint, TransformPosition( b[1], M ) );
+            minPoint = fminf( minPoint, TransformPosition( float3( b[0].x, b[1].y, b[1].z ), M ) );
+            minPoint = fminf( minPoint, TransformPosition( float3( b[1].x, b[0].y, b[1].z ), M ) );
+            minPoint = fminf( minPoint, TransformPosition( float3( b[1].x, b[1].y, b[0].z ), M ) );
+            return minPoint;
+        }
+
+        float3 GetAABBMax() const {
+            float3 maxPoint = TransformPosition( b[0], M );
+            maxPoint = fminf( maxPoint, TransformPosition( float3( b[1].x, b[0].y, b[0].z ), M ) );
+            maxPoint = fminf( maxPoint, TransformPosition( float3( b[0].x, b[1].y, b[0].z ), M ) );
+            maxPoint = fminf( maxPoint, TransformPosition( float3( b[0].x, b[0].y, b[1].z ), M ) );
+
+            maxPoint = fminf( maxPoint, TransformPosition( b[1], M ) );
+            maxPoint = fminf( maxPoint, TransformPosition( float3( b[0].x, b[1].y, b[1].z ), M ) );
+            maxPoint = fminf( maxPoint, TransformPosition( float3( b[1].x, b[0].y, b[1].z ), M ) );
+            maxPoint = fminf( maxPoint, TransformPosition( float3( b[1].x, b[1].y, b[0].z ), M ) );
+            return maxPoint;
+        }
+
         float3 b[2];
         mat4 M, invM;
         int objIdx = -1;
@@ -285,13 +331,35 @@ namespace Tmpl8 {
         }
         float3 GetNormal( const float3 I ) const
         {
-            // TransformVector( float3( 0, -1, 0 ), T ) 
-            return float3( -T.cell[1], -T.cell[5], -T.cell[9] );
+            return TransformVector( float3( 0, -1, 0 ), T );
+            //return float3( -T.cell[1], -T.cell[5], -T.cell[9] );
         }
         float3 GetAlbedo( const float3 I ) const
         {
             return float3( 10 );
         }
+
+        // BVH building stuff
+        float3 GetCentroid() const {
+            return TransformPosition( float3( 0 ), T );
+        }
+
+        float3 GetAABBMin() const {
+            float3 minPoint = TransformPosition( float3( -size, 0, -size ), T );
+            minPoint = fminf( minPoint, TransformPosition( float3( -size, 0, size ), T ) );
+            minPoint = fminf( minPoint, TransformPosition( float3( size, 0, -size ), T ) );
+            minPoint = fminf( minPoint, TransformPosition( float3( size, 0, size ), T ) );
+            return minPoint;
+        }
+
+        float3 GetAABBMax() const {
+            float3 maxPoint = TransformPosition( float3( -size, 0, -size ), T );
+            maxPoint = fminf( maxPoint, TransformPosition( float3( -size, 0, size ), T ) );
+            maxPoint = fminf( maxPoint, TransformPosition( float3( size, 0, -size ), T ) );
+            maxPoint = fminf( maxPoint, TransformPosition( float3( size, 0, size ), T ) );
+            return maxPoint;
+        }
+
         float size;
         mat4 T, invT;
         int objIdx = -1;
@@ -306,6 +374,7 @@ namespace Tmpl8 {
             B = v1;
             C = v2;
             this->N = normalize( cross( C - A, B - A ) );
+            centroid = ( A + B + C ) / 3;
         }
 
         void Intersect( Ray& ray ) const {
@@ -344,10 +413,24 @@ namespace Tmpl8 {
             return float3( 10 );
         }
 
+        // BVH building stuff
+        float3 GetCentroid() const {
+            return centroid;
+        }
+
+        float3 GetAABBMin() const {
+            return fminf( A, fminf( B, C ) );
+        }
+
+        float3 GetAABBMax() const {
+            return fmaxf( A, fmaxf( B, C ) );
+        }
+
         float3 N;
         float3 A;
         float3 B;
         float3 C;
+        float3 centroid;
         int objIdx = -1;
     };
 
@@ -357,10 +440,10 @@ namespace Tmpl8 {
         vector<Triangle> triangles;
     public:
         ObjModel() = default;
-        ObjModel( const string fileName, int &objIdx, const float scale = 1, const float3 offset = float3( 0 ), mat4 rotate = mat4::Identity() ) {
+        ObjModel( const string fileName, uint& objIdx, const float scale = 1, const float3 offset = float3( 0 ), mat4 rotate = mat4::Identity() ) {
             ifstream in( fileName, ios::in );
             if ( !in ) {
-                printf("Couldn't open OBJ file.\n");
+                printf( "Couldn't open OBJ file.\n" );
                 return;
             }
 
@@ -381,7 +464,7 @@ namespace Tmpl8 {
 
                     sscanf( chh, "f %i/%*i/%*i %i/%*i/%*i %i/%*i/%*i", &a, &b, &c );
 
-                    triangles.push_back( Triangle( objIdx, vertices[a - 1], vertices[b - 1], vertices[c - 1] ));
+                    triangles.push_back( Triangle( objIdx, vertices[a - 1], vertices[b - 1], vertices[c - 1] ) );
                     objIdx++;
                 }
             }
@@ -407,6 +490,20 @@ namespace Tmpl8 {
         float3 GetNormal( int triangle, float3 I ) const {
             return triangles[triangle].GetNormal( I );
         }
+
+
+        // BVH building stuff
+        float3 GetCentroid( const int idx ) const {
+            return triangles[idx].GetCentroid();
+        }
+
+        float3 GetAABBMin( const int idx ) const {
+            return triangles[idx].GetAABBMin();
+        }
+
+        float3 GetAABBMax( const int idx ) const {
+            return triangles[idx].GetAABBMax();
+        }
     };
 
     // -----------------------------------------------------------
@@ -421,44 +518,144 @@ namespace Tmpl8 {
     public:
         Scene()
         {
-            red     = make_shared<Diffuse>( Diffuse( float3( 1.0f, 0.0f, 0.0f ) ) );
-            green   = make_shared<Diffuse>( Diffuse( float3( 0.0f, 1.0f, 0.0f ) ) );
-            blue    = make_shared<Diffuse>( Diffuse( float3( 0.0f, 0.0f, 1.0f ) ) );
-            white   = make_shared<Diffuse>( Diffuse( float3( 1.0f, 1.0f, 1.0f ) ) );
+            // make the Materials
+            red = make_shared<Diffuse>( Diffuse( float3( 1.0f, 0.0f, 0.0f ) ) );
+            green = make_shared<Diffuse>( Diffuse( float3( 0.0f, 1.0f, 0.0f ) ) );
+            blue = make_shared<Diffuse>( Diffuse( float3( 0.0f, 0.0f, 1.0f ) ) );
+            white = make_shared<Diffuse>( Diffuse( float3( 1.0f, 1.0f, 1.0f ) ) );
 
-            mirror  = make_shared<Mirror>( Mirror( float3( 0.9f, 0.9f, 0.9f ) ) );
+            mirror = make_shared<Mirror>( Mirror( float3( 0.9f, 0.9f, 0.9f ) ) );
 
-            mix     = make_shared<DSMix>( DSMix( float3( 0.9f, 0.2f, 0.1f ), 0.5f ) );
+            mix = make_shared<DSMix>( DSMix( float3( 0.9f, 0.2f, 0.1f ), 0.5f ) );
 
             checkerboard = make_shared<Checkerboard>( Checkerboard( float3( 0.1f, 0.1f, 0.1f ), float3( 0.9f, 0.9f, 0.9f ), 0.95f ) );
 
-            glass   = make_shared<Dielectric>( Dielectric( float3( 0.5f, 0.5f, 0.5f ), 1.52f ) );
+            glass = make_shared<Dielectric>( Dielectric( float3( 0.5f, 0.5f, 0.5f ), 1.52f ) );
             diamond = make_shared<Dielectric>( Dielectric( float3( 4.0f, 1.0f, 0.7f ), 2.42f ) );
 
             lamp = make_shared<Light>( Light( float3( 24.0f, 24.0f, 22.0f ), float3( 0.0f, -1.0f, 0.0f ) ) );
-            
-            earth = make_shared<TextureMaterial>( TextureMaterial( "assets/earth.png" ) );
-            // we store all primitives in one continuous buffer
-            quad = Quad( 0, 1 );									// 0: light source
-            sphere = Sphere( 1, float3( 0 ), 0.5f );				// 1: bouncing ball
-            sphere2 = Sphere( 2, float3( 0, 2.5f, -3.07f ), 8 );	// 2: rounded corners
-            cube = Cube( 3, float3( 0 ), float3( 1.15f ) );			// 3: cube
-            plane[0] = Plane( 4, float3( 1, 0, 0 ), 3 );			// 4: left wall
-            plane[1] = Plane( 5, float3( -1, 0, 0 ), 2.99f );		// 5: right wall
-            plane[2] = Plane( 6, float3( 0, 1, 0 ), 1 );			// 6: floor
-            plane[3] = Plane( 7, float3( 0, -1, 0 ), 2 );			// 7: ceiling
-            plane[4] = Plane( 8, float3( 0, 0, 1 ), 3 );			// 8: front wall
-            plane[5] = Plane( 9, float3( 0, 0, -1 ), 3.99f );		// 9: back wall
-            triangle = Triangle(10, float3( 0, 0, 3 ), float3( 0.5, 1, 3 ), float3( -0.5, 1, 3 ) ); // 10: triangle
 
-            // start at 10000 just so we always have enough
-            int modelObjIndices = 10000;
-            mat4 tetRotation = mat4::RotateX(0.5 * PI) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI );
-            tet = ObjModel("assets/tetrahedron.obj", modelObjIndices, 1.0f / 100.0f, float3( 0 , 0.5f, 0.5f ), tetRotation );
+            earth = make_shared<TextureMaterial>( TextureMaterial( "assets/earth.png" ) );
+
+            // we store all primitives in one continuous buffer
+            quad = Quad( primitiveCount++, 1 );									// 0: light source
+            sphere = Sphere( primitiveCount++, float3( 0 ), 0.5f );				// 1: bouncing ball
+            sphere2 = Sphere( primitiveCount++, float3( 0, 2.5f, -3.07f ), 8 );	// 2: rounded corners
+            cube = Cube( primitiveCount++, float3( 0 ), float3( 1.15f ) );			// 3: cube
+            triangle = Triangle( primitiveCount++, float3( 0, 0, 3 ), float3( 0.5, -1, 3 ), float3( -0.5, -1, 3 ) ); // 4: triangle
+            groundQuad = Quad( primitiveCount++, 50, mat4::Translate( float3( 0.0f, -1.0f, 0.0f ) ) ); // 5: ground quad
+
+            mat4 tetRotation = mat4::RotateX( 0.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI );
+            tet = ObjModel( "assets/tetrahedron.obj", primitiveCount, 1.0f / 100.0f, float3( 0, 0.5f, 0.5f ), tetRotation );
+
             SetTime( 0 );
+
+            // build BVH after objects are moved with setTime
+            printf("Building BVH...\n");
+            primitiveIndices = (uint*) MALLOC64( primitiveCount * sizeof( uint ) );
+            for ( int i = 0; i < primitiveCount; i++ ) {
+                primitiveIndices[i] = i;
+            }
+
+            bvhNode = (BVHNode*) MALLOC64( primitiveCount * sizeof( BVHNode ) );
+            nodesUsed = 1;
+            BuildBVH();
+            printf( "Finished BVH!\n" );
+
+            // planes are annoying
+            // plane[0] = Plane( primitiveCount + 1, float3( 1, 0, 0 ), 3 );			// 10000: left wall
+            // plane[1] = Plane( primitiveCount + 2, float3( -1, 0, 0 ), 2.99f );		// 10001: right wall
+            // plane[2] = Plane( primitiveCount + 3, float3( 0, 1, 0 ), 1 );			// 10002: floor
+            // plane[3] = Plane( primitiveCount + 4, float3( 0, -1, 0 ), 2 );			// 10003: ceiling
+            // plane[4] = Plane( primitiveCount + 5, float3( 0, 0, 1 ), 3 );			// 10004: front wall
+            // plane[5] = Plane( primitiveCount + 6, float3( 0, 0, -1 ), 3.99f );		// 10005: back wall
             // Note: once we have triangle support we should get rid of the class
             // hierarchy: virtuals reduce performance somewhat.
         }
+
+        void BuildBVH() {
+            BVHNode& root = bvhNode[rootNodeIdx];
+            root.left = 0;
+            root.firstPrimitiveIdx = 0;
+            root.primitiveCount = primitiveCount;
+
+            UpdateNodeBounds( rootNodeIdx );
+            Subdivide( rootNodeIdx );
+        }
+
+        void Subdivide( uint nodeIdx ) {
+            BVHNode& node = bvhNode[nodeIdx];
+            float3 extent = node.aabbMax - node.aabbMin;
+            // determine longest axis which we want to split on
+            int axis = 0;
+            if ( extent.y > extent.x ) axis = 1;
+            if ( extent.z > extent[axis] ) axis = 2;
+            float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
+
+            // split the primitives in two halves
+            int i = node.firstPrimitiveIdx;
+            int j = i + node.primitiveCount - 1;
+            while ( i <= j ) {
+                float3 centroid;
+                int objIdx = primitiveIndices[ i ];
+                if ( objIdx == 0 ) centroid = quad.GetCentroid();
+                else if ( objIdx == 1 ) centroid = sphere.GetCentroid();
+                else if ( objIdx == 2 ) centroid = sphere2.GetCentroid();
+                else if ( objIdx == 3 ) centroid = cube.GetCentroid();
+                else if ( objIdx == 4 ) centroid = triangle.GetCentroid();
+                else if ( objIdx == 5 ) centroid = groundQuad.GetCentroid();
+                else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) centroid = tet.GetCentroid( tetIdx );
+
+                if ( centroid[axis] < splitPos ) i++;
+                else swap( primitiveIndices[ i ], primitiveIndices[ j-- ] );
+            }
+            
+            int leftCount = i - node.firstPrimitiveIdx;
+            if ( leftCount == 0 || leftCount == node.primitiveCount ) return;
+            // create child nodes
+            int leftChildIdx = nodesUsed++;
+            int rightChildIdx = nodesUsed++;
+            node.left = leftChildIdx;
+            bvhNode[leftChildIdx].firstPrimitiveIdx = node.firstPrimitiveIdx;
+            bvhNode[leftChildIdx].primitiveCount = leftCount;
+            bvhNode[rightChildIdx].firstPrimitiveIdx = i;
+            bvhNode[rightChildIdx].primitiveCount = node.primitiveCount - leftCount;
+            node.primitiveCount = 0;
+        }
+
+        void UpdateNodeBounds( uint nodeIdx ) const {
+            BVHNode& node = bvhNode[nodeIdx];
+            node.aabbMin = float3( 1e30f );
+            node.aabbMax = float3( -1e30f );
+
+            int objIdx;
+            for ( int i = 0; i < primitiveCount; i++ ) {
+                objIdx = primitiveIndices[i];
+                if ( objIdx == 0 ) {
+                    node.aabbMin = fminf( node.aabbMin, quad.GetAABBMin() );
+                    node.aabbMax = fmaxf( node.aabbMax, quad.GetAABBMax() );
+                } else if ( objIdx == 1 ) {
+                    node.aabbMin = fminf( node.aabbMin, sphere.GetAABBMin() );
+                    node.aabbMax = fmaxf( node.aabbMax, sphere.GetAABBMax() );
+                } else if ( objIdx == 2 ) {
+                    node.aabbMin = fminf( node.aabbMin, sphere2.GetAABBMin() );
+                    node.aabbMax = fmaxf( node.aabbMax, sphere.GetAABBMax() );
+                } else if ( objIdx == 3 ) {
+                    node.aabbMin = fminf( node.aabbMin, cube.GetAABBMin() );
+                    node.aabbMax = fmaxf( node.aabbMax, cube.GetAABBMax() );
+                } else if ( objIdx == 4 ) {
+                    node.aabbMin = fminf( node.aabbMin, triangle.GetAABBMin() );
+                    node.aabbMax = fmaxf( node.aabbMax, triangle.GetAABBMax() );
+                } else if ( objIdx == 5 ) {
+                    node.aabbMin = fminf( node.aabbMin, groundQuad.GetAABBMin() );
+                    node.aabbMax = fmaxf( node.aabbMax, groundQuad.GetAABBMax() );
+                } else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) {
+                    node.aabbMin = fminf( node.aabbMin, tet.GetAABBMin( tetIdx ) );
+                    node.aabbMax = fmaxf( node.aabbMax, tet.GetAABBMax( tetIdx ) );
+                }
+            }
+        }
+
         shared_ptr<ObjectMaterial> GetMaterial( int objIdx ) {
             switch ( objIdx ) {
                 case 0:     // light panel
@@ -469,26 +666,15 @@ namespace Tmpl8 {
                     return green;
                 case 3:     // cube
                     return diamond;
-                case 4:     // left wall
-                    return green;
-                case 5:     // right wall
-                    return red;
-                case 6:     // floor
-                    return checkerboard;
-                case 7:     // ceiling
-                    return white;
-                case 8:     // front wall
-                    return white;
-                case 9:     // back wall
-                    return green;
-                case 10:    // triangle
+                case 4:    // triangle
                     return mix;
+                case 5:    // ground quad
+                    return checkerboard;
                 default:
                     if ( tet.hasObject( objIdx ) != -1 ) {
                         return mirror;
                     }
 
-                    printf( "This should be unreachable - scene, getMaterial()\n" );
                     return white;
             }
         }
@@ -518,6 +704,9 @@ namespace Tmpl8 {
         float3 GetLightColor() const {
             return float3( 24, 24, 22 );
         }
+        float3 GetLightDir() const {
+            return float3( 0.0f, -1.0f, 0.0f );
+        }
         void FindNearest( Ray& ray ) const
         {
             // room walls - ugly shortcut for more speed
@@ -525,20 +714,21 @@ namespace Tmpl8 {
             //if ( ray.D.x < 0 ) PLANE_X( 3, 4 ) else PLANE_X( -2.99f, 5 );
             //if ( ray.D.y < 0 ) PLANE_Y( 1, 6 ) else PLANE_Y( -2, 7 );
             //if ( ray.D.z < 0 ) PLANE_Z( 3, 8 ) else PLANE_Z( -3.99f, 9 );
-            plane[2].Intersect( ray );
+            //plane[2].Intersect( ray );
             //plane[5].Intersect( ray );
             quad.Intersect( ray );
+            groundQuad.Intersect( ray );
             sphere.Intersect( ray );
             //sphere2.Intersect( ray );
             cube.Intersect( ray );
             triangle.Intersect(ray);
             tet.Intersect(ray);
         }
-        bool IsOccluded( Ray& ray ) const
-        {
+        bool IsOccluded( Ray& ray ) const {
             float rayLength = ray.t;
             // skip planes: it is not possible for the walls to occlude anything
             quad.Intersect( ray );
+            groundQuad.Intersect( ray );
             sphere.Intersect( ray );
             //sphere2.Intersect( ray );
             cube.Intersect( ray );
@@ -562,7 +752,8 @@ namespace Tmpl8 {
             else if ( objIdx == 1 ) N = sphere.GetNormal( I );
             else if ( objIdx == 2 ) N = sphere2.GetNormal( I );
             else if ( objIdx == 3 ) N = cube.GetNormal( I );
-            else if ( objIdx == 10 ) N = triangle.GetNormal( I );
+            else if ( objIdx == 4 ) N = triangle.GetNormal( I );
+            else if ( objIdx == 5 ) N = groundQuad.GetNormal( I );
             else {
                 // faster to handle the 6 planes without a call to GetNormal
                 N = float3( 0 );
@@ -578,7 +769,8 @@ namespace Tmpl8 {
             if ( objIdx == 1 ) return sphere.GetAlbedo( I );
             if ( objIdx == 2 ) return sphere2.GetAlbedo( I );
             if ( objIdx == 3 ) return cube.GetAlbedo( I );
-            else if ( objIdx == 10 ) return triangle.GetAlbedo( I );
+            else if ( objIdx == 4 ) return triangle.GetAlbedo( I );
+            if ( objIdx == 5 ) return groundQuad.GetAlbedo( I );
             return plane[objIdx - 4].GetAlbedo( I );
             // once we have triangle support, we should pass objIdx and the bary-
             // centric coordinates of the hit, instead of the intersection location.
@@ -596,6 +788,7 @@ namespace Tmpl8 {
         __declspec( align( 64 ) ) // start a new cacheline here
             float animTime = 0;
         Quad quad;
+        Quad groundQuad;
         Sphere sphere;
         Sphere sphere2;
         Cube cube;
@@ -620,6 +813,12 @@ namespace Tmpl8 {
         shared_ptr<ObjectMaterial> lamp;
 
         shared_ptr<ObjectMaterial> earth;
+
+        BVHNode* bvhNode;
+        uint* primitiveIndices;
+        uint rootNodeIdx = 0;
+        uint nodesUsed;
+        uint primitiveCount = 0;
     };
 
 }

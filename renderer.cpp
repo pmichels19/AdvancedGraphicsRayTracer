@@ -32,7 +32,7 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
         Ray ray_out;
         continues = mat->bounce( ray, I, N, color, ray_out );
         result *= color;
-        if ( !continues ) break;
+        if ( !continues ) return result;
 
         ray = ray_out;
     }
@@ -92,7 +92,9 @@ float3 Renderer::WhittedTrace( Ray& ray, int depth ) {
         }
     }
 
-    return float3( colorVars[0], colorVars[1], colorVars[2] ) * result;
+    float3 color = float3( colorVars[0], colorVars[1], colorVars[2] );
+    delete colorVars;
+    return color * result;
 }
 
 // -----------------------------------------------------------
@@ -147,5 +149,5 @@ void Renderer::Tick( float deltaTime ) {
     avg = ( 1 - alpha ) * avg + alpha * t.elapsed() * 1000;
     if ( alpha > 0.05f ) alpha *= 0.5f;
     float fps = 1000 / avg, rps = ( SCRWIDTH * SCRHEIGHT ) * fps;
-    printf( "%5.2fms (%.1fps) - %.1fMrays/s\n", avg, fps, rps / 1000000 );
+    //printf( "%5.2fms (%.1fps) - %.1fMrays/s\n", avg, fps, rps / 1000000 );
 }

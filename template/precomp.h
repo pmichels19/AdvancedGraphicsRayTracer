@@ -1658,6 +1658,7 @@ inline float random_float( const float min, const float max ) {
 
 #include "Ray.h"
 
+// Material items
 #include "MaterialType.h"
 
 #include "ObjectMaterial.h"
@@ -1668,6 +1669,8 @@ inline float random_float( const float min, const float max ) {
 #include "DSMix.h"
 #include "Checkerboard.h"
 #include "TextureMaterial.h"
+
+#include "BVHNode.h"
 
 #include "scene.h"
 #include "camera.h"

@@ -129,6 +129,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BVHNode.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="Checkerboard.h" />
     <ClInclude Include="Dielectric.h" />
