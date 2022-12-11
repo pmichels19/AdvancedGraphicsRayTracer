@@ -17,7 +17,7 @@ float3 Renderer::Trace( Ray& ray, int depth ) {
     float3 result = float3( 1.0f );
     for ( int d = depth; d >= 0; d-- ) {
         //scene.FindNearest( ray );
-        scene.IntersectBVH( ray, 0 );
+        scene.IntersectBVH( ray );
 
         // if we hit nothing return a sky color
         if ( ray.objIdx == -1 ) {
@@ -45,7 +45,7 @@ float3 Renderer::WhittedTrace( Ray& ray, int depth ) {
     float3 result = float3( 0 );
     if ( depth == 0 ) return result;
 
-    scene.FindNearest( ray );
+    scene.IntersectBVH( ray );
     if ( ray.objIdx == -1 ) return skyColor( ray.D );
 
     float3 I = ray.O + ray.t * ray.D;

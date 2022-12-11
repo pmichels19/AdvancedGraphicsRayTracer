@@ -288,14 +288,14 @@ namespace Tmpl8 {
 
         float3 GetAABBMax() const {
             float3 maxPoint = TransformPosition( b[0], M );
-            maxPoint = fminf( maxPoint, TransformPosition( float3( b[1].x, b[0].y, b[0].z ), M ) );
-            maxPoint = fminf( maxPoint, TransformPosition( float3( b[0].x, b[1].y, b[0].z ), M ) );
-            maxPoint = fminf( maxPoint, TransformPosition( float3( b[0].x, b[0].y, b[1].z ), M ) );
+            maxPoint = fmaxf( maxPoint, TransformPosition( float3( b[1].x, b[0].y, b[0].z ), M ) );
+            maxPoint = fmaxf( maxPoint, TransformPosition( float3( b[0].x, b[1].y, b[0].z ), M ) );
+            maxPoint = fmaxf( maxPoint, TransformPosition( float3( b[0].x, b[0].y, b[1].z ), M ) );
 
-            maxPoint = fminf( maxPoint, TransformPosition( b[1], M ) );
-            maxPoint = fminf( maxPoint, TransformPosition( float3( b[0].x, b[1].y, b[1].z ), M ) );
-            maxPoint = fminf( maxPoint, TransformPosition( float3( b[1].x, b[0].y, b[1].z ), M ) );
-            maxPoint = fminf( maxPoint, TransformPosition( float3( b[1].x, b[1].y, b[0].z ), M ) );
+            maxPoint = fmaxf( maxPoint, TransformPosition( b[1], M ) );
+            maxPoint = fmaxf( maxPoint, TransformPosition( float3( b[0].x, b[1].y, b[1].z ), M ) );
+            maxPoint = fmaxf( maxPoint, TransformPosition( float3( b[1].x, b[0].y, b[1].z ), M ) );
+            maxPoint = fmaxf( maxPoint, TransformPosition( float3( b[1].x, b[1].y, b[0].z ), M ) );
             return maxPoint;
         }
 
@@ -354,9 +354,9 @@ namespace Tmpl8 {
 
         float3 GetAABBMax() const {
             float3 maxPoint = TransformPosition( float3( -size, 0, -size ), T );
-            maxPoint = fminf( maxPoint, TransformPosition( float3( -size, 0, size ), T ) );
-            maxPoint = fminf( maxPoint, TransformPosition( float3( size, 0, -size ), T ) );
-            maxPoint = fminf( maxPoint, TransformPosition( float3( size, 0, size ), T ) );
+            maxPoint = fmaxf( maxPoint, TransformPosition( float3( -size, 0, size ), T ) );
+            maxPoint = fmaxf( maxPoint, TransformPosition( float3( size, 0, -size ), T ) );
+            maxPoint = fmaxf( maxPoint, TransformPosition( float3( size, 0, size ), T ) );
             return maxPoint;
         }
 
@@ -436,12 +436,12 @@ namespace Tmpl8 {
 
     class ObjModel {
     private:
+        uint firstObjIdx;
         vector<float3> vertices;
         vector<Triangle> triangles;
     public:
         ObjModel() = default;
         ObjModel( const string fileName, uint& objIdx, mat4 transform = mat4::Identity() ) {
-        //ObjModel( const string fileName, uint& objIdx, const float scale = 1, const float3 offset = float3( 0 ), mat4 rotate = mat4::Identity() ) {
             ifstream in( fileName, ios::in );
             if ( !in ) {
                 printf( "Couldn't open OBJ file.\n" );
@@ -449,6 +449,7 @@ namespace Tmpl8 {
             }
 
             string line;
+            firstObjIdx = objIdx;
             while ( getline( in, line ) ) {
                 if ( line.substr( 0, 2 ) == "v " ) {
                     //check v for vertices
@@ -480,16 +481,14 @@ namespace Tmpl8 {
         }
 
         int hasObject( const int objIdx ) const {
-            int idx = 0;
-            for ( Triangle t : triangles ) {
-                if ( t.objIdx == objIdx ) return idx;
-                idx++;
-            }
+            uint lastObjIdx = firstObjIdx + triangles.size();
+            if ( objIdx >= firstObjIdx && objIdx < lastObjIdx ) return objIdx - firstObjIdx;
 
             return -1;
         }
 
         float3 GetNormal( int triangle, float3 I ) const {
+            //printf("getting triangle %d\n", triangle);
             return triangles[triangle].GetNormal( I );
         }
 
@@ -556,6 +555,8 @@ namespace Tmpl8 {
                 mat4::RotateX( 0.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI ) * 
                 mat4::Scale( 0.01f );
             tet = ObjModel( "assets/tetrahedron.obj", primitiveCount, tetTransform );
+            mat4 teapotTransform = mat4::Translate( float3( 0, 0.5f, -4.0f ) ) * mat4::Scale( 0.01f );
+            teapot = ObjModel( "assets/tetrahedron.obj", primitiveCount, teapotTransform );
 
             SetTime( 0 );
 
@@ -566,7 +567,7 @@ namespace Tmpl8 {
                 primitiveIndices[i] = i;
             }
 
-            bvhNode = (BVHNode*) MALLOC64( primitiveCount * sizeof( BVHNode ) );
+            bvhNode = (BVHNode*) MALLOC64( ( 2 * primitiveCount + 1 ) * sizeof( BVHNode ) );
             nodesUsed = 2; // skip a node because memory alignment
             BuildBVH();
             printf( "Finished BVH!\n" );
@@ -584,70 +585,176 @@ namespace Tmpl8 {
 
         void BuildBVH() {
             BVHNode& root = bvhNode[rootNodeIdx];
-            root.leftOrFirstPrimitiveIdx = 0;
+            root.leftFirst = 0;
             root.primitiveCount = primitiveCount;
 
             UpdateNodeBounds( rootNodeIdx );
             Subdivide( rootNodeIdx );
         }
 
+        float3 GetCentroid( int objIdx ) {
+            float3 centroid = float3( 0 );
+            if ( objIdx == 0 ) centroid = quad.GetCentroid();
+            else if ( objIdx == 1 ) centroid = sphere.GetCentroid();
+            else if ( objIdx == 2 ) centroid = cube.GetCentroid();
+            else if ( objIdx == 3 ) centroid = triangle.GetCentroid();
+            else if ( objIdx == 4 ) centroid = groundQuad.GetCentroid();
+            else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) centroid = tet.GetCentroid( tetIdx );
+            else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) centroid = teapot.GetCentroid( teapotIdx );
+
+            return centroid;
+        }
+
         void Subdivide( uint nodeIdx ) {
             BVHNode& node = bvhNode[nodeIdx];
-            if ( node.primitiveCount <= 2 ) return;
-
+            // determine split axis and position
             float3 extent = node.aabbMax - node.aabbMin;
-            // determine longest axis which we want to split on
-            int axis = 0;
-            if ( extent.y > extent.x ) axis = 1;
-            if ( extent.z > extent[axis] ) axis = 2;
-            float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
 
-            // split the primitives in two halves
-            int i = node.leftOrFirstPrimitiveIdx;
+            // determine split axis using SAH
+            int bestAxis = -1;
+            float bestPos = 0;
+            float bestCost = 1e30f;
+            for ( int axis = 0; axis < 3; axis++ ) {
+                for ( uint i = 0; i < node.primitiveCount; i++ ) {
+                    int objIdx = primitiveIndices[node.leftFirst + i];
+                    float candidatePos = GetCentroid( objIdx )[axis];
+                    float cost = EvaluateSAH( node, axis, candidatePos );
+                    if ( cost < bestCost ) {
+                        bestPos = candidatePos;
+                        bestAxis = axis;
+                        bestCost = cost;
+                    }
+                }
+            }
+
+            // terminate recursion
+            float3 e = node.aabbMax - node.aabbMin; // extent of parent
+            float parentArea = e.x * e.y + e.y * e.z + e.z * e.x;
+            float parentCost = node.primitiveCount * parentArea;
+            if ( bestCost >= parentCost ) return;
+                
+            int axis = bestAxis;
+            float splitPos = bestPos;
+
+            // in-place partition
+            int i = node.leftFirst;
             int j = i + node.primitiveCount - 1;
             while ( i <= j ) {
-                float3 centroid;
-                int objIdx = primitiveIndices[ i ];
-                if ( objIdx == 0 ) centroid = quad.GetCentroid();
-                else if ( objIdx == 1 ) centroid = sphere.GetCentroid();
-                else if ( objIdx == 2 ) centroid = cube.GetCentroid();
-                else if ( objIdx == 3 ) centroid = triangle.GetCentroid();
-                else if ( objIdx == 4 ) centroid = groundQuad.GetCentroid();
-                else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) centroid = tet.GetCentroid( tetIdx );
-
+                int objIdx = primitiveIndices[node.leftFirst + i];
+                float3 centroid = GetCentroid( objIdx );
                 if ( centroid[axis] < splitPos ) i++;
-                else swap( primitiveIndices[ i ], primitiveIndices[ j-- ] );
+                else swap( primitiveIndices[i], primitiveIndices[j--] );
             }
-            
-            // abort if one of the sides of the split is empty
-            int leftCount = i - node.leftOrFirstPrimitiveIdx;
+            // abort split if one of the sides is empty
+            int leftCount = i - node.leftFirst;
             if ( leftCount == 0 || leftCount == node.primitiveCount ) return;
             // create child nodes
             int leftChildIdx = nodesUsed++;
             int rightChildIdx = nodesUsed++;
-            bvhNode[leftChildIdx].leftOrFirstPrimitiveIdx = node.leftOrFirstPrimitiveIdx;
+            bvhNode[leftChildIdx].leftFirst = node.leftFirst;
             bvhNode[leftChildIdx].primitiveCount = leftCount;
-            bvhNode[rightChildIdx].leftOrFirstPrimitiveIdx = i;
+            bvhNode[rightChildIdx].leftFirst = i;
             bvhNode[rightChildIdx].primitiveCount = node.primitiveCount - leftCount;
-            // update the (now parent) node
-            node.leftOrFirstPrimitiveIdx = leftChildIdx;
+            node.leftFirst = leftChildIdx;
             node.primitiveCount = 0;
-            // set the aabb's for both children
             UpdateNodeBounds( leftChildIdx );
             UpdateNodeBounds( rightChildIdx );
-            // see if we should subdivide those as well
+            // recurse
             Subdivide( leftChildIdx );
             Subdivide( rightChildIdx );
         }
+        
+        float EvaluateSAH( BVHNode& node, int axis, float pos ) {
+            // determine triangle counts and bounds for this split candidate
+            aabb leftBox, rightBox;
+            int leftCount = 0, rightCount = 0;
+            for ( uint i = 0; i < node.primitiveCount; i++ ) {
+                int objIdx = primitiveIndices[node.leftFirst + i];
+                float centroidAtAxis = GetCentroid( objIdx )[axis];
+                if ( objIdx == 0 ) {
+                    if ( centroidAtAxis < pos ) {
+                        leftCount++;
+                        leftBox.Grow( quad.GetAABBMin() );
+                        leftBox.Grow( quad.GetAABBMax() );
+                    } else {
+                        rightCount++;
+                        rightBox.Grow( quad.GetAABBMin() );
+                        rightBox.Grow( quad.GetAABBMax() );
+                    }
+                } else if ( objIdx == 1 ) {
+                    if ( centroidAtAxis < pos ) {
+                        leftCount++;
+                        leftBox.Grow( sphere.GetAABBMin() );
+                        leftBox.Grow( sphere.GetAABBMax() );
+                    } else {
+                        rightCount++;
+                        rightBox.Grow( sphere.GetAABBMin() );
+                        rightBox.Grow( sphere.GetAABBMax() );
+                    }
+                } else if ( objIdx == 2 ) { 
+                    if ( centroidAtAxis < pos ) {
+                        leftCount++;
+                        leftBox.Grow( cube.GetAABBMin() );
+                        leftBox.Grow( cube.GetAABBMax() );
+                    } else {
+                        rightCount++;
+                        rightBox.Grow( cube.GetAABBMin() );
+                        rightBox.Grow( cube.GetAABBMax() );
+                    }
+                } else if ( objIdx == 3 ) { 
+                    if ( centroidAtAxis < pos ) {
+                        leftCount++;
+                        leftBox.Grow( triangle.GetAABBMin() );
+                        leftBox.Grow( triangle.GetAABBMax() );
+                    } else {
+                        rightCount++;
+                        rightBox.Grow( triangle.GetAABBMin() );
+                        rightBox.Grow( triangle.GetAABBMax() );
+                    }
+                } else if ( objIdx == 4 ) {
+                    if ( centroidAtAxis < pos ) {
+                        leftCount++;
+                        leftBox.Grow( groundQuad.GetAABBMin() );
+                        leftBox.Grow( groundQuad.GetAABBMax() );
+                    } else {
+                        rightCount++;
+                        rightBox.Grow( groundQuad.GetAABBMin() );
+                        rightBox.Grow( groundQuad.GetAABBMax() );
+                    }
+                } else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) {
+                    if ( centroidAtAxis < pos ) {
+                        leftCount++;
+                        leftBox.Grow( tet.GetAABBMin( tetIdx ) );
+                        leftBox.Grow( tet.GetAABBMax( tetIdx ) );
+                    } else {
+                        rightCount++;
+                        rightBox.Grow( tet.GetAABBMin( tetIdx ) );
+                        rightBox.Grow( tet.GetAABBMax( tetIdx ) );
+                    }
+                } else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) {
+                    if ( centroidAtAxis < pos ) {
+                        leftCount++;
+                        leftBox.Grow( teapot.GetAABBMin( teapotIdx ) );
+                        leftBox.Grow( teapot.GetAABBMax( teapotIdx ) );
+                    } else {
+                        rightCount++;
+                        rightBox.Grow( teapot.GetAABBMin( teapotIdx ) );
+                        rightBox.Grow( teapot.GetAABBMax( teapotIdx ) );
+                    }
+                }
+            }
 
-        void UpdateNodeBounds( uint nodeIdx ) const {
+            float cost = leftCount * leftBox.Area() + rightCount * rightBox.Area();
+            return cost > 0 ? cost : 1e30f;
+        }
+
+        void UpdateNodeBounds( uint nodeIdx ) {
             BVHNode& node = bvhNode[nodeIdx];
             node.aabbMin = float3( 1e30f );
             node.aabbMax = float3( -1e30f );
-
-            int objIdx;
-            for ( int i = 0; i < primitiveCount; i++ ) {
-                objIdx = primitiveIndices[i];
+            uint first = node.leftFirst;
+            for ( int i = 0; i < node.primitiveCount; i++ ) {
+                uint objIdx = primitiveIndices[first + i];
                 if ( objIdx == 0 ) {
                     node.aabbMin = fminf( node.aabbMin, quad.GetAABBMin() );
                     node.aabbMax = fmaxf( node.aabbMax, quad.GetAABBMax() );
@@ -666,6 +773,9 @@ namespace Tmpl8 {
                 } else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) {
                     node.aabbMin = fminf( node.aabbMin, tet.GetAABBMin( tetIdx ) );
                     node.aabbMax = fmaxf( node.aabbMax, tet.GetAABBMax( tetIdx ) );
+                } else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) {
+                    node.aabbMin = fminf( node.aabbMin, teapot.GetAABBMin( teapotIdx ) );
+                    node.aabbMax = fmaxf( node.aabbMax, teapot.GetAABBMax( teapotIdx ) );
                 }
             }
         }
@@ -683,10 +793,8 @@ namespace Tmpl8 {
                 case 4:    // ground quad
                     return checkerboard;
                 default:
-                    if ( tet.hasObject( objIdx ) != -1 ) {
-                        return mirror;
-                    }
-
+                    if ( tet.hasObject( objIdx ) != -1 ) return mirror;
+                    if ( teapot.hasObject( objIdx ) != -1 ) return red;
                     return white;
             }
         }
@@ -733,44 +841,67 @@ namespace Tmpl8 {
             cube.Intersect( ray );
             triangle.Intersect(ray);
             tet.Intersect(ray);
+            teapot.Intersect( ray );
         }
+        
+        void IntersectBVH( Ray& ray ) {
+            BVHNode* node = &bvhNode[rootNodeIdx], * stack[64];
+            uint stackPtr = 0;
+            while ( true ) {
+                if ( node->isLeaf() ) {
+                    for ( uint i = 0; i < node->primitiveCount; i++ ) {
+                        int objIdx = primitiveIndices[node->leftFirst + i];
+                        if ( objIdx == 0 ) quad.Intersect( ray );
+                        else if ( objIdx == 1 ) sphere.Intersect( ray );
+                        else if ( objIdx == 2 ) cube.Intersect( ray );
+                        else if ( objIdx == 3 ) triangle.Intersect( ray );
+                        else if ( objIdx == 4 ) groundQuad.Intersect( ray );
+                        else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) tet.Intersect( ray, tetIdx );
+                        else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) teapot.Intersect( ray, teapotIdx );
+                    }
 
-        void IntersectBVH( Ray& ray, const uint nodeIdx ) const {
-            BVHNode& node = bvhNode[nodeIdx];
-            if ( !IntersectAABB( ray, node.aabbMin, node.aabbMax) ) return;
-            if ( node.isLeaf() ) {
-                for ( uint i = 0; i < node.primitiveCount; i++ ) {
-                    int objIdx = primitiveIndices[i];
-                    if ( objIdx == 0 ) quad.Intersect( ray );
-                    else if ( objIdx == 1 ) sphere.Intersect( ray );
-                    else if ( objIdx == 2 ) cube.Intersect( ray );
-                    else if ( objIdx == 3 ) triangle.Intersect( ray );
-                    else if ( objIdx == 4 ) groundQuad.Intersect( ray );
-                    else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) tet.Intersect( ray, tetIdx );
+                    if ( stackPtr == 0 ) break;
+                    else node = stack[--stackPtr];
+                    continue;
                 }
-            } else {
-                IntersectBVH( ray, node.leftOrFirstPrimitiveIdx );
-                IntersectBVH( ray, node.leftOrFirstPrimitiveIdx + 1 );
+
+                BVHNode* child1 = &bvhNode[node->leftFirst];
+                BVHNode* child2 = &bvhNode[node->leftFirst + 1];
+                float dist1 = IntersectAABB( ray, child1->aabbMin, child1->aabbMax );
+                float dist2 = IntersectAABB( ray, child2->aabbMin, child2->aabbMax );
+                if ( dist1 > dist2 ) { 
+                    swap( dist1, dist2 );
+                    swap( child1, child2 );
+                }
+
+                if ( dist1 > 1e30f - FLT_EPSILON ) {
+                    if ( stackPtr == 0 ) break;
+                    else node = stack[--stackPtr];
+                } else {
+                    node = child1;
+                    if ( dist2 < 1e30f ) stack[stackPtr++] = child2;
+                }
             }
         }
 
-        bool IntersectAABB( const Ray& ray, const float3 bmin, const float3 bmax ) const {
-            float tx1 = ( bmin.x - ray.O.x ) / ray.D.x;
-            float tx2 = ( bmax.x - ray.O.x ) / ray.D.x;
+        float IntersectAABB( const Ray& ray, const float3 bmin, const float3 bmax ) {
+            float tx1 = ( bmin.x - ray.O.x ) * ray.rD.x;
+            float tx2 = ( bmax.x - ray.O.x ) * ray.rD.x;
             float tmin = min( tx1, tx2 );
             float tmax = max( tx1, tx2 );
 
-            float ty1 = ( bmin.y - ray.O.y ) / ray.D.y;
-            float ty2 = ( bmax.y - ray.O.y ) / ray.D.y;
+            float ty1 = ( bmin.y - ray.O.y ) * ray.rD.y;
+            float ty2 = ( bmax.y - ray.O.y ) * ray.rD.y;
             tmin = max( tmin, min( ty1, ty2 ) );
             tmax = min( tmax, max( ty1, ty2 ) );
 
-            float tz1 = ( bmin.z - ray.O.z ) / ray.D.z;
-            float tz2 = ( bmax.z - ray.O.z ) / ray.D.z;
+            float tz1 = ( bmin.z - ray.O.z ) * ray.rD.z;
+            float tz2 = ( bmax.z - ray.O.z ) * ray.rD.z;
             tmin = max( tmin, min( tz1, tz2 ) );
             tmax = min( tmax, max( tz1, tz2 ) );
 
-            return tmax >= tmin && tmin < ray.t && tmax > 0;
+            if ( tmax >= tmin && tmin < ray.t && tmax > 0 ) return tmin;
+            return 1e30f;
         }
 
         bool IsOccluded( Ray& ray ) const {
@@ -783,6 +914,7 @@ namespace Tmpl8 {
             cube.Intersect( ray );
             triangle.Intersect( ray );
             tet.Intersect(ray);
+            teapot.Intersect( ray );
             return ray.t < rayLength && ray.t > EPS; // final addition to compensate for floating point inaccuracy
             // technically this is wasteful: 
             // - we potentially search beyond rayLength
@@ -795,13 +927,13 @@ namespace Tmpl8 {
             // this way we prevent calculating it multiple times.
             if ( objIdx == -1 ) return float3( 0 ); // or perhaps we should just crash
             float3 N;
-            int modelTriangle = tet.hasObject( objIdx );
-            if ( modelTriangle != -1 ) N = tet.GetNormal( modelTriangle, I );
-            else if ( objIdx == 0 ) N = quad.GetNormal( I );
+            if ( objIdx == 0 ) N = quad.GetNormal( I );
             else if ( objIdx == 1 ) N = sphere.GetNormal( I );
             else if ( objIdx == 2 ) N = cube.GetNormal( I );
             else if ( objIdx == 3 ) N = triangle.GetNormal( I );
             else if ( objIdx == 4 ) N = groundQuad.GetNormal( I );
+            else if( int modelTriangle = tet.hasObject( objIdx ); modelTriangle != -1 ) N = tet.GetNormal( modelTriangle, I );
+            else if ( int modelTriangle = teapot.hasObject( objIdx ); modelTriangle != -1 ) N = teapot.GetNormal( modelTriangle, I );
             else {
                 // faster to handle the 6 planes without a call to GetNormal
                 N = float3( 0 );
@@ -842,6 +974,7 @@ namespace Tmpl8 {
         Triangle triangle;
         Plane plane[6];
         ObjModel tet;
+        ObjModel teapot;
 
         shared_ptr<ObjectMaterial> red;
         shared_ptr<ObjectMaterial> green;
