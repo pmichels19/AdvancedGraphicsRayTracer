@@ -36,7 +36,7 @@ namespace Tmpl8 {
 
                 Ray toLight = Ray( I, intersectionToLight, distance - ( 2 * EPS ) );
                 // return black if no light source connects or if we are facing the occluded side of an object
-                if ( scene.IsOccluded( toLight ) ) {
+                if ( scene.IsOccluded( toLight ) ) { // TODO: IsOccluded is super slow atm!
                     continue;
                 }
 

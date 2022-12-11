@@ -114,32 +114,33 @@ void Renderer::Tick( float deltaTime ) {
     Timer t;
     // lines are executed as OpenMP parallel tasks (disabled in DEBUG)
 #pragma omp parallel for schedule(dynamic)
-    for ( int y = 0; y < SCRHEIGHT; y++ ) {
+    for ( int y = 0; y < SCRHEIGHT; y += 4 ) {
         // trace a primary ray for each pixel on the line
-        for ( int x = 0; x < SCRWIDTH; x++ ) {
-            int samples;
-            float3 result = float3( 0 );
-            for ( samples = 0; samples < 1; samples++ ) { // iterate to 1 to disable anti-aliasing, going higher will drastically impact performance
-                if ( animation ) scene.SetTime( animTime + Rand( deltaTime * 0.002f ) );
-                if ( useWhitted ) {
-                    result += WhittedTrace( camera.GetPrimaryRay( x, y ) );
-                } else {
-                    result += Trace( camera.GetPrimaryRay( x, y ) );
+        for ( int x = 0; x < SCRWIDTH; x += 4 ) {
+            for ( int v = 0; v < 4; v++ ) {
+                for ( int u = 0; u < 4; u++ ) {
+                    int samples;
+                    float3 result = float3( 0 );
+                    for ( samples = 0; samples < 1; samples++ ) { // iterate to 1 to disable anti-aliasing, going higher will drastically impact performance
+                        if ( animation ) scene.SetTime( animTime + Rand( deltaTime * 0.002f ) );
+                        if ( useWhitted ) {
+                            result += WhittedTrace( camera.GetPrimaryRay( x + u, y + v ) );
+                        } else {
+                            result += Trace( camera.GetPrimaryRay( x + u, y + v ) );
+                        }
+                    }
+
+                    int accIdx = ( x + u ) + ( y + v ) * SCRWIDTH;
+
+                    if ( !stationary || animation ) accumulator[accIdx] = 0;
+                    // increment the hit count so we don't divide by 0
+                    accumulator[accIdx].w += 1;
+                    // take the average over all hits
+                    accumulator[accIdx] = accumulator[accIdx] + ( 1.0f / accumulator[accIdx].w ) * ( float4( ( 1.0f / (float) samples ) * result, accumulator[accIdx].w ) - accumulator[accIdx] );
+                    // translate accumulator contents to rgb32 pixels
+                    screen->pixels[accIdx] = RGBF32_to_RGB8( &accumulator[accIdx] );
                 }
             }
-
-            int accIdx = x + y * SCRWIDTH;
-
-            if ( !stationary || animation ) accumulator[accIdx] = 0;
-            // increment the hit count so we don't divide by 0
-            accumulator[accIdx].w += 1;
-            // take the average over all hits
-            accumulator[accIdx] = accumulator[accIdx] + ( 1.0f / accumulator[accIdx].w ) * ( float4( ( 1.0f / (float) samples ) * result, accumulator[accIdx].w ) - accumulator[accIdx] );
-        }
-
-        // translate accumulator contents to rgb32 pixels
-        for ( int dest = y * SCRWIDTH, x = 0; x < SCRWIDTH; x++ ) {
-            screen->pixels[dest + x] = RGBF32_to_RGB8( &accumulator[x + y * SCRWIDTH] );
         }
     }
 
