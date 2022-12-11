@@ -557,7 +557,7 @@ namespace Tmpl8 {
                 mat4::RotateX( 0.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI ) * 
                 mat4::Scale( 0.01f );
             tet = ObjModel( "assets/tetrahedron.obj", primitiveCount, tetTransform );
-            mat4 teapotTransform = mat4::Translate( float3( 0, 0.5f, 4.0f ) ); // * mat4::Scale( 0.01f );
+            mat4 teapotTransform = mat4::Translate( float3( 0, 0.5f, -4.0f ) );// * mat4::Scale( 0.01f );
             teapot = ObjModel( "assets/teapot.obj", primitiveCount, teapotTransform );
 
             SetTime( 0 );
@@ -613,30 +613,11 @@ namespace Tmpl8 {
             float3 extent = node.aabbMax - node.aabbMin;
 
             // determine split axis using SAH
-            int bestAxis = -1;
-            float bestPos = 0;
-            float bestCost = 1e30f;
-            for ( int axis = 0; axis < 3; axis++ ) {
-                for ( uint i = 0; i < node.primitiveCount; i++ ) {
-                    int objIdx = primitiveIndices[node.leftFirst + i];
-                    float candidatePos = GetCentroid( objIdx )[axis];
-                    float cost = EvaluateSAH( node, axis, candidatePos );
-                    if ( cost < bestCost ) {
-                        bestPos = candidatePos;
-                        bestAxis = axis;
-                        bestCost = cost;
-                    }
-                }
-            }
-
-            // terminate recursion
-            float3 e = node.aabbMax - node.aabbMin; // extent of parent
-            float parentArea = e.x * e.y + e.y * e.z + e.z * e.x;
-            float parentCost = node.primitiveCount * parentArea;
+            int axis;
+            float splitPos;
+            float bestCost = FindBestSplitPlane( node, axis, splitPos );
+            float parentCost = calculateNodeCost( node );
             if ( bestCost >= parentCost ) return;
-                
-            int axis = bestAxis;
-            float splitPos = bestPos;
 
             // in-place partition
             int i = node.leftFirst;
@@ -664,6 +645,33 @@ namespace Tmpl8 {
             // recurse
             Subdivide( leftChildIdx );
             Subdivide( rightChildIdx );
+        }
+
+        float FindBestSplitPlane( BVHNode& node, int& axis, float& splitPos ) {
+            float bestCost = 1e30f;
+            for ( int a = 0; a < 3; a++ ) {
+                float boundsMin = node.aabbMin[a];
+                float boundsMax = node.aabbMax[a];
+                if ( boundsMin == boundsMax ) continue;
+
+                float scale = ( boundsMax - boundsMin ) / 100.0f;
+                for ( uint i = 1; i < 100; i++ ) {
+                    float candidatePos = boundsMin + i * scale;
+                    float cost = EvaluateSAH( node, a, candidatePos );
+                    if ( cost < bestCost ) {
+                        axis = a;
+                        splitPos = candidatePos;
+                        bestCost = cost;
+                    }
+                }
+            }
+            return bestCost;
+        }
+
+        float calculateNodeCost( BVHNode& node ) {
+            float3 e = node.aabbMax - node.aabbMin;
+            float area = e.x * e.y + e.y * e.z + e.z * e.x;
+            return node.primitiveCount * area;
         }
         
         float EvaluateSAH( BVHNode& node, int axis, float pos ) {
