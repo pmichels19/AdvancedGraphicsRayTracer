@@ -42,8 +42,8 @@ namespace Tmpl8 {
 
         Ray GetPrimaryRay( const int x, const int y ) {
             // calculate pixel position on virtual screen plane
-            const float u = (float) x * ( 1.0f / SCRWIDTH ) + random_float( 0, ( 1.0f / SCRWIDTH ) );
-            const float v = (float) y * ( 1.0f / SCRHEIGHT ) + random_float( 0, ( 1.0f / SCRHEIGHT ) );
+            const float u = (float) x * rWidth + random_float( 0, rWidth );
+            const float v = (float) y * rHeight + random_float( 0, rHeight );
 
             float3 rd = lensRadius * randomInUnitDisk();
             const float3 offset = float3( u * rd.x, v * rd.y, 0 );
@@ -92,6 +92,8 @@ namespace Tmpl8 {
         float FOV;
 
         float aspect = (float) SCRWIDTH / (float) SCRHEIGHT;
+        float rWidth = 1.0f / SCRWIDTH;
+        float rHeight = 1.0f / SCRHEIGHT;
         float3 camPos;
         float3 topLeft, topRight, bottomLeft;
         mat4 totalRotation;

@@ -471,6 +471,8 @@ namespace Tmpl8 {
                     objIdx++;
                 }
             }
+
+            vertices.clear();
         }
 
         void Intersect( Ray& ray ) const {
@@ -543,7 +545,7 @@ namespace Tmpl8 {
             earth = make_shared<TextureMaterial>( TextureMaterial( "assets/earth.png" ) );
 
             // we store all primitives in one continuous buffer
-            quad = Quad( primitiveCount++, 1 );									// 0: light source
+            quad = Quad( primitiveCount++, 2 );									// 0: light source
             sphere = Sphere( primitiveCount++, float3( 0 ), 0.5f );				// 1: bouncing ball
             //sphere2 = Sphere( primitiveCount++, float3( 0, 2.5f, -3.07f ), 8 );	// 2: rounded corners
             cube = Cube( primitiveCount++, float3( 0 ), float3( 1.15f ) );			// 3: cube
@@ -555,8 +557,8 @@ namespace Tmpl8 {
                 mat4::RotateX( 0.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI ) * 
                 mat4::Scale( 0.01f );
             tet = ObjModel( "assets/tetrahedron.obj", primitiveCount, tetTransform );
-            mat4 teapotTransform = mat4::Translate( float3( 0, 0.5f, -4.0f ) ) * mat4::Scale( 0.01f );
-            teapot = ObjModel( "assets/tetrahedron.obj", primitiveCount, teapotTransform );
+            mat4 teapotTransform = mat4::Translate( float3( 0, 0.5f, 4.0f ) ); // * mat4::Scale( 0.01f );
+            teapot = ObjModel( "assets/teapot.obj", primitiveCount, teapotTransform );
 
             SetTime( 0 );
 
@@ -794,7 +796,7 @@ namespace Tmpl8 {
                     return checkerboard;
                 default:
                     if ( tet.hasObject( objIdx ) != -1 ) return mirror;
-                    if ( teapot.hasObject( objIdx ) != -1 ) return red;
+                    if ( teapot.hasObject( objIdx ) != -1 ) return white;
                     return white;
             }
         }
