@@ -557,7 +557,7 @@ namespace Tmpl8 {
                 mat4::RotateX( 0.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI ) * 
                 mat4::Scale( 0.01f );
             tet = ObjModel( "assets/tetrahedron.obj", primitiveCount, tetTransform );
-            mat4 teapotTransform = mat4::Translate( float3( 0, 0.5f, -4.0f ) );// * mat4::Scale( 0.01f );
+            mat4 teapotTransform = mat4::Translate( float3( 0, 0.5f, 4.0f ) );// * mat4::Scale( 0.01f );
             teapot = ObjModel( "assets/teapot.obj", primitiveCount, teapotTransform );
 
             SetTime( 0 );
@@ -605,6 +605,32 @@ namespace Tmpl8 {
             else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) centroid = teapot.GetCentroid( teapotIdx );
 
             return centroid;
+        }
+
+        float3 GetAABBMin( int objIdx ) {
+            float3 aabbMin = float3( 0 );
+            if ( objIdx == 0 ) aabbMin = quad.GetAABBMin();
+            else if ( objIdx == 1 ) aabbMin = sphere.GetAABBMin();
+            else if ( objIdx == 2 ) aabbMin = cube.GetAABBMin();
+            else if ( objIdx == 3 ) aabbMin = triangle.GetAABBMin();
+            else if ( objIdx == 4 ) aabbMin = groundQuad.GetAABBMin();
+            else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) aabbMin = tet.GetAABBMin( tetIdx );
+            else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) aabbMin = teapot.GetAABBMin( teapotIdx );
+
+            return aabbMin;
+        }
+
+        float3 GetAABBMax( int objIdx ) {
+            float3 aabbMax = float3( 0 );
+            if ( objIdx == 0 ) aabbMax = quad.GetAABBMax();
+            else if ( objIdx == 1 ) aabbMax = sphere.GetAABBMax();
+            else if ( objIdx == 2 ) aabbMax = cube.GetAABBMax();
+            else if ( objIdx == 3 ) aabbMax = triangle.GetAABBMax();
+            else if ( objIdx == 4 ) aabbMax = groundQuad.GetAABBMax();
+            else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) aabbMax = tet.GetAABBMax( tetIdx );
+            else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) aabbMax = teapot.GetAABBMax( teapotIdx );
+
+            return aabbMax;
         }
 
         void Subdivide( uint nodeIdx ) {
@@ -660,17 +686,54 @@ namespace Tmpl8 {
 
                 if ( boundsMin == boundsMax ) continue;
 
-                float scale = ( boundsMax - boundsMin ) / 100.0f;
-                for ( uint i = 1; i < 100; i++ ) {
-                    float candidatePos = boundsMin + i * scale;
-                    float cost = EvaluateSAH( node, a, candidatePos );
-                    if ( cost < bestCost ) {
+                // populate the bins
+                BVHBin bin[BIN_COUNT];
+                float scale = BIN_COUNT / ( boundsMax - boundsMin );
+                for ( uint i = 0; i < node.primitiveCount; i++ ) {
+                    int objIdx = primitiveIndices[node.leftFirst + i];
+                    float centroidAtAxis = GetCentroid( objIdx )[a];
+                    int binIdx = min( BIN_COUNT - 1, (int) ( ( centroidAtAxis - boundsMin ) * scale ) );
+                    // update the found bin with the bounding box needed for the found object
+                    bin[binIdx].primitiveCount++;
+                    bin[binIdx].bounds.Grow( GetAABBMin( objIdx ) );
+                    bin[binIdx].bounds.Grow( GetAABBMax( objIdx ) );
+                }
+
+                // gather data for the planes between the bins
+                aabb leftBox;
+                aabb rightBox;
+                int leftCount[BIN_COUNT - 1];
+                int rightCount[BIN_COUNT - 1];
+                int leftSum = 0;
+                int rightSum = 0;
+                float leftArea[BIN_COUNT - 1];
+                float rightArea[BIN_COUNT - 1];
+                for ( int i = 0; i < BIN_COUNT - 1; i++ ) {
+                    // fill in data for the left
+                    leftSum += bin[i].primitiveCount;
+                    leftCount[i] = leftSum;
+                    leftBox.Grow( bin[i].bounds );
+                    leftArea[i] = leftBox.Area();
+                    // same for data on the right
+                    rightSum += bin[BIN_COUNT - 1 - i].primitiveCount;
+                    rightCount[BIN_COUNT - 2 - i] = rightSum;
+                    rightBox.Grow( bin[BIN_COUNT - 1 - i].bounds );
+                    rightArea[BIN_COUNT - 2 - i] = rightBox.Area();
+                }
+
+                // calculate SAH cost for the planes
+                scale = ( boundsMax - boundsMin ) / BIN_COUNT;
+                for ( int i = 0; i < BIN_COUNT - 1; i++ ) {
+                    float planeCost = leftCount[i] * leftArea[i] + rightCount[i] * rightArea[i];
+
+                    if ( planeCost < bestCost ) {
                         axis = a;
-                        splitPos = candidatePos;
-                        bestCost = cost;
+                        splitPos = boundsMin + scale * ( i + 1 );
+                        bestCost = planeCost;
                     }
                 }
             }
+
             return bestCost;
         }
 
@@ -678,90 +741,6 @@ namespace Tmpl8 {
             float3 e = node.aabbMax - node.aabbMin;
             float area = e.x * e.y + e.y * e.z + e.z * e.x;
             return node.primitiveCount * area;
-        }
-        
-        float EvaluateSAH( BVHNode& node, int axis, float pos ) {
-            // determine triangle counts and bounds for this split candidate
-            aabb leftBox, rightBox;
-            int leftCount = 0, rightCount = 0;
-            for ( uint i = 0; i < node.primitiveCount; i++ ) {
-                int objIdx = primitiveIndices[node.leftFirst + i];
-                float centroidAtAxis = GetCentroid( objIdx )[axis];
-                if ( objIdx == 0 ) {
-                    if ( centroidAtAxis < pos ) {
-                        leftCount++;
-                        leftBox.Grow( quad.GetAABBMin() );
-                        leftBox.Grow( quad.GetAABBMax() );
-                    } else {
-                        rightCount++;
-                        rightBox.Grow( quad.GetAABBMin() );
-                        rightBox.Grow( quad.GetAABBMax() );
-                    }
-                } else if ( objIdx == 1 ) {
-                    if ( centroidAtAxis < pos ) {
-                        leftCount++;
-                        leftBox.Grow( sphere.GetAABBMin() );
-                        leftBox.Grow( sphere.GetAABBMax() );
-                    } else {
-                        rightCount++;
-                        rightBox.Grow( sphere.GetAABBMin() );
-                        rightBox.Grow( sphere.GetAABBMax() );
-                    }
-                } else if ( objIdx == 2 ) { 
-                    if ( centroidAtAxis < pos ) {
-                        leftCount++;
-                        leftBox.Grow( cube.GetAABBMin() );
-                        leftBox.Grow( cube.GetAABBMax() );
-                    } else {
-                        rightCount++;
-                        rightBox.Grow( cube.GetAABBMin() );
-                        rightBox.Grow( cube.GetAABBMax() );
-                    }
-                } else if ( objIdx == 3 ) { 
-                    if ( centroidAtAxis < pos ) {
-                        leftCount++;
-                        leftBox.Grow( triangle.GetAABBMin() );
-                        leftBox.Grow( triangle.GetAABBMax() );
-                    } else {
-                        rightCount++;
-                        rightBox.Grow( triangle.GetAABBMin() );
-                        rightBox.Grow( triangle.GetAABBMax() );
-                    }
-                } else if ( objIdx == 4 ) {
-                    if ( centroidAtAxis < pos ) {
-                        leftCount++;
-                        leftBox.Grow( groundQuad.GetAABBMin() );
-                        leftBox.Grow( groundQuad.GetAABBMax() );
-                    } else {
-                        rightCount++;
-                        rightBox.Grow( groundQuad.GetAABBMin() );
-                        rightBox.Grow( groundQuad.GetAABBMax() );
-                    }
-                } else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) {
-                    if ( centroidAtAxis < pos ) {
-                        leftCount++;
-                        leftBox.Grow( tet.GetAABBMin( tetIdx ) );
-                        leftBox.Grow( tet.GetAABBMax( tetIdx ) );
-                    } else {
-                        rightCount++;
-                        rightBox.Grow( tet.GetAABBMin( tetIdx ) );
-                        rightBox.Grow( tet.GetAABBMax( tetIdx ) );
-                    }
-                } else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) {
-                    if ( centroidAtAxis < pos ) {
-                        leftCount++;
-                        leftBox.Grow( teapot.GetAABBMin( teapotIdx ) );
-                        leftBox.Grow( teapot.GetAABBMax( teapotIdx ) );
-                    } else {
-                        rightCount++;
-                        rightBox.Grow( teapot.GetAABBMin( teapotIdx ) );
-                        rightBox.Grow( teapot.GetAABBMax( teapotIdx ) );
-                    }
-                }
-            }
-
-            float cost = leftCount * leftBox.Area() + rightCount * rightBox.Area();
-            return cost > 0 ? cost : 1e30f;
         }
 
         void UpdateNodeBounds( uint nodeIdx ) {
@@ -771,28 +750,8 @@ namespace Tmpl8 {
             uint first = node.leftFirst;
             for ( int i = 0; i < node.primitiveCount; i++ ) {
                 uint objIdx = primitiveIndices[first + i];
-                if ( objIdx == 0 ) {
-                    node.aabbMin = fminf( node.aabbMin, quad.GetAABBMin() );
-                    node.aabbMax = fmaxf( node.aabbMax, quad.GetAABBMax() );
-                } else if ( objIdx == 1 ) {
-                    node.aabbMin = fminf( node.aabbMin, sphere.GetAABBMin() );
-                    node.aabbMax = fmaxf( node.aabbMax, sphere.GetAABBMax() );
-                } else if ( objIdx == 2 ) {
-                    node.aabbMin = fminf( node.aabbMin, cube.GetAABBMin() );
-                    node.aabbMax = fmaxf( node.aabbMax, cube.GetAABBMax() );
-                } else if ( objIdx == 3 ) {
-                    node.aabbMin = fminf( node.aabbMin, triangle.GetAABBMin() );
-                    node.aabbMax = fmaxf( node.aabbMax, triangle.GetAABBMax() );
-                } else if ( objIdx == 4 ) {
-                    node.aabbMin = fminf( node.aabbMin, groundQuad.GetAABBMin() );
-                    node.aabbMax = fmaxf( node.aabbMax, groundQuad.GetAABBMax() );
-                } else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) {
-                    node.aabbMin = fminf( node.aabbMin, tet.GetAABBMin( tetIdx ) );
-                    node.aabbMax = fmaxf( node.aabbMax, tet.GetAABBMax( tetIdx ) );
-                } else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) {
-                    node.aabbMin = fminf( node.aabbMin, teapot.GetAABBMin( teapotIdx ) );
-                    node.aabbMax = fmaxf( node.aabbMax, teapot.GetAABBMax( teapotIdx ) );
-                }
+                node.aabbMin = fminf( node.aabbMin, GetAABBMin( objIdx ) );
+                node.aabbMax = fmaxf( node.aabbMax, GetAABBMax( objIdx ) );
             }
         }
 

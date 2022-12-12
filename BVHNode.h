@@ -1,5 +1,7 @@
 #pragma once
 
+#define BIN_COUNT 8
+
 struct BVHNode {
     float3 aabbMin;
     float3 aabbMax;
@@ -9,4 +11,9 @@ struct BVHNode {
     bool isLeaf() {
         return primitiveCount > 0;
     }
+};
+
+struct BVHBin {
+    aabb bounds;
+    int primitiveCount = 0;
 };
