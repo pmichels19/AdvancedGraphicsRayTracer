@@ -88,6 +88,10 @@ namespace Tmpl8 {
             return pos + float3( r2 * invr );
         }
 
+        float GetArea() const {
+            return 4.0f * PI * r2;
+        }
+
         float3 pos = 0;
         float r2 = 0, invr = 0;
         int objIdx = -1;
@@ -148,6 +152,9 @@ namespace Tmpl8 {
                 return float3( i3 ) * ( 1.0f / 255.0f );
             }
             return float3( 0.93f );
+        }
+        float GetArea() {
+            return 1e30f;
         }
         float3 N;
         float d;
@@ -299,6 +306,11 @@ namespace Tmpl8 {
             return maxPoint;
         }
 
+        float GetArea() {
+            float size = b[1].x - b[0].x;
+            return 6.0f * size * size;
+        }
+
         float3 b[2];
         mat4 M, invM;
         int objIdx = -1;
@@ -358,6 +370,10 @@ namespace Tmpl8 {
             maxPoint = fmaxf( maxPoint, TransformPosition( float3( size, 0, -size ), T ) );
             maxPoint = fmaxf( maxPoint, TransformPosition( float3( size, 0, size ), T ) );
             return maxPoint;
+        }
+
+        float GetArea() const {
+            return size * size;
         }
 
         float size;
@@ -426,6 +442,12 @@ namespace Tmpl8 {
             return fmaxf( A, fmaxf( B, C ) );
         }
 
+        float GetArea() const {
+            float3 AB = B - A;
+            float3 AC = C - A;
+            return 0.5f * length( cross( AB, AC ) );
+        }
+
         float3 N;
         float3 A;
         float3 B;
@@ -482,6 +504,10 @@ namespace Tmpl8 {
             }
         }
 
+        void Intersect( Ray& ray, const int idx ) const {
+            triangles[idx].Intersect( ray );
+        }
+
         int hasObject( const int objIdx ) const {
             uint lastObjIdx = firstObjIdx + triangles.size();
             if ( objIdx >= firstObjIdx && objIdx < lastObjIdx ) return objIdx - firstObjIdx;
@@ -493,7 +519,6 @@ namespace Tmpl8 {
             //printf("getting triangle %d\n", triangle);
             return triangles[triangle].GetNormal( I );
         }
-
 
         // BVH building stuff
         float3 GetCentroid( const int idx ) const {
@@ -508,8 +533,13 @@ namespace Tmpl8 {
             return triangles[idx].GetAABBMax();
         }
 
-        void Intersect( Ray& ray, const int idx ) const {
-            triangles[idx].Intersect( ray );
+        float GetArea() const {
+            float result = 0;
+            for ( Triangle triangle : triangles ) {
+                result += triangle.GetArea();
+            }
+
+            return result;
         }
     };
 
@@ -631,6 +661,19 @@ namespace Tmpl8 {
             else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) aabbMax = teapot.GetAABBMax( teapotIdx );
 
             return aabbMax;
+        }
+
+        float3 GetArea( int objIdx ) {
+            float area = 0.0f;
+            if ( objIdx == 0 ) area = quad.GetArea();
+            else if ( objIdx == 1 ) area = sphere.GetArea();
+            else if ( objIdx == 2 ) area = cube.GetArea();
+            else if ( objIdx == 3 ) area = triangle.GetArea();
+            else if ( objIdx == 4 ) area = groundQuad.GetArea();
+            else if ( tet.hasObject( objIdx ) != -1 ) area = tet.GetArea();
+            else if ( teapot.hasObject( objIdx ) != -1 ) area = teapot.GetArea();
+
+            return area;
         }
 
         void Subdivide( uint nodeIdx ) {
