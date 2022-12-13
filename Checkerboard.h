@@ -8,41 +8,16 @@ public:
         specular = 1.0f - this->diffuse;
     }
 
-    virtual bool bounce( const Ray& ray_in, const float3 I, const float3 N, float3& attenuation, Ray& ray_out ) const override {
-        bool evenX = abs( ( (int) floor( I.x ) ) % 2 ) == 0;
-        bool evenZ = abs( ( (int) floor( I.z ) ) % 2 ) == 0;
-        if ( evenX == evenZ ) {
-            attenuation = color1;
-        } else {
-            attenuation = color2;
-        }
-
+    virtual MaterialType getFlag() const override {
         if ( diffuse < FLT_EPSILON ) {
-            // if diffuse is 0, do reflection
-            ray_out = Ray( I, normalize( reflect( ray_in.D, N ) ) );
-        } else if ( specular < FLT_EPSILON ) {
-            // if specular is 0, do diffuse reflection
-            float3 R = DiffuseReflection( N );
-            ray_out = Ray( I, R );
-
-            float3 BRDF = attenuation * INVPI;
-            float toEi = dot( N, R );
-            attenuation = PI * 2.0f * BRDF * toEi;
-        } else {
-            // if both are > 0 we pick one randomly
-            if ( RandomFloat() < specular ) {
-                ray_out = Ray( I, normalize( reflect( ray_in.D, N ) ) );
-            } else {
-                float3 R = DiffuseReflection( N );
-                ray_out = Ray( I, R );
-
-                float3 BRDF = attenuation * INVPI;
-                float toEi = dot( N, R );
-                attenuation = PI * 2.0f * BRDF * toEi;
-            }
+            return MaterialType::SPECULAR;
         }
 
-        return true;
+        if ( specular < FLT_EPSILON ) {
+            return MaterialType::DIFFUSE;
+        }
+
+        return MaterialType::MIX;
     }
 
     virtual float3 GetColor( Ray& ray_in ) const override {
@@ -75,18 +50,6 @@ public:
 
         ray_out = Ray( I, DiffuseReflection( N ) );
         return false;
-    }
-
-    virtual MaterialType getFlag() const override {
-        if ( diffuse < FLT_EPSILON ) {
-            return MaterialType::SPECULAR;
-        }
-
-        if ( specular < FLT_EPSILON ) {
-            return MaterialType::DIFFUSE;
-        }
-
-        return MaterialType::MIX;
     }
 
     virtual float* getColorModifier( Ray& ray_in, float3 N ) const {

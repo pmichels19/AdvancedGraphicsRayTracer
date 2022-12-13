@@ -39,6 +39,26 @@ namespace Tmpl8 {
             return result / (float) samples;
         }
 
+        float3 NextEventDirectIllumination( float3 I, float3 N, float3 albedo, float3 BRDF ) {
+            float area;
+            float distance;
+            float3 Nl;
+            float3 L = scene.RandomPointOnLight( I, Nl, area, distance );
+            Ray toLight( I, L, distance - 2.0f * EPS );
+
+            float dotNL = dot( N, L );
+            float dotNlL = dot( Nl, -L );
+            float3 Ld = float3( 0.0f );
+            if ( dotNL > 0 && dotNlL > 0 ) {
+                if ( !scene.IsOccluded( toLight ) ) {
+                    float solidAngle = ( dotNlL * area ) / ( distance * distance );
+                    Ld = albedo * solidAngle * BRDF * dotNL; // TODO: currently we have only one hardcoded light...that might change
+                }
+            }
+
+            return Ld;
+        }
+
         void Tick( float deltaTime );
 
         void Shutdown() { /* implement if you want to do something on exit */ }

@@ -4,14 +4,9 @@ class Light: public ObjectMaterial {
 public:
     Light() = default;
     Light( const float3& color, const float3& direction = float3( 0 ) ): color( color ), direction( direction ) {}
-    
-    virtual bool bounce( const Ray& ray_in, const float3 I, const float3 N, float3& attenuation, Ray& ray_out ) const override {
-        if ( sqrLength( direction ) < FLT_EPSILON || dot( direction, N ) > 0 ) {
-            attenuation = color;
-        } else {
-            attenuation = float3( 0 );
-        }
-        return false;
+
+    virtual MaterialType getFlag() const override {
+        return MaterialType::LIGHT;
     }
 
     virtual float3 GetColor( Ray& ray_in ) const override {
@@ -20,10 +15,6 @@ public:
 
     virtual bool scatter( Ray& ray_in, float3 I, float3 N, Ray& ray_out ) const override {
         return false;
-    }
-
-    virtual MaterialType getFlag() const override {
-        return MaterialType::LIGHT;
     }
 
     virtual float* getColorModifier( Ray& ray_in, float3 N ) const {

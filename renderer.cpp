@@ -24,33 +24,40 @@ float3 Renderer::Trace( Ray& ray, int depth, bool lastSpecular ) {
     float3 I = ray.O + ray.t * ray.D;
     float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
     shared_ptr<ObjectMaterial> mat = scene.GetMaterial( ray.objIdx );
-    // material calls
-    float3 albedo = mat->GetColor( ray );
+
+    // from material we can get a bounce ray, an albedo, whether the bounce is from a specular surface and the type of material
     Ray ray_out;
     bool specularBounce = mat->scatter( ray, I, N, ray_out );
+    float3 albedo = mat->GetColor( ray );
     MaterialType flag = mat->getFlag();
 
     if ( flag == DIFFUSE ) {
+        // diffuse = 2pi * BRDF * irradiance + direct lighting
         float3 BRDF = albedo * INVPI;
+        float3 Ld = NextEventDirectIllumination( I, N, albedo, BRDF );
         float3 Ei = Trace( ray_out, depth - 1, specularBounce ) * dot( N, ray_out.D );
-        return PI * 2.0f * BRDF * Ei;// + Ld
+        return PI * 2.0f * BRDF * Ei + Ld;
     } else if ( flag == SPECULAR ) {
+        // specular is simple reflection * material albedo
         return albedo * Trace( ray_out, depth - 1, specularBounce );
     } else if ( flag == MIX ) {
         if ( specularBounce ) {
-            // if we did a specular bounce, simply return color * recurse
+            // specular is simple reflection * material albedo
             return albedo * Trace( ray_out, depth - 1, specularBounce );
         }
 
-        // otherwise, bounce and check direct lights
+        // diffuse = 2pi * BRDF * irradiance + direct lighting
         float3 BRDF = albedo * INVPI;
+        float3 Ld = NextEventDirectIllumination( I, N, albedo, BRDF );
         float3 Ei = Trace( ray_out, depth - 1, specularBounce ) * dot( N, ray_out.D );
-        return PI * 2.0f * BRDF * Ei;// + Ld
+        return PI * 2.0f * BRDF * Ei + Ld;
     } else if ( flag == DIELECTRIC ) {
+        // similar thing for dielectrics as for specular materials. Applies Beer's law using the GetColor and ray.inside
         return albedo * Trace( ray_out, depth - 1, specularBounce );
     } else if ( flag == LIGHT ) {
+        // lights are the easiest, only return color if we got there from a specular surface or the camera
         if ( lastSpecular ) return albedo;
-
+        // black otherwise
         return float3( 0.0f );
     }
 

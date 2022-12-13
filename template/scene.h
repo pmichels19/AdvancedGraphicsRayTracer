@@ -645,7 +645,7 @@ namespace Tmpl8 {
                 mat4::RotateX( 0.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI ) * 
                 mat4::Scale( 0.01f );
             tet = ObjModel( "assets/tetrahedron.obj", primitiveCount, tetTransform );
-            mat4 teapotTransform = mat4::Translate( float3( 0, 0.5f, 4.0f ) );// * mat4::Scale( 0.01f );
+            mat4 teapotTransform = mat4::Translate( float3( 0, 0.5f, -4.0f ) );// * mat4::Scale( 0.01f );
             teapot = ObjModel( "assets/teapot.obj", primitiveCount, teapotTransform );
 
             SetTime( 0 );
@@ -1051,14 +1051,19 @@ namespace Tmpl8 {
             return false;
         }
 
-        float3 RandomPointOnLight( Ray& ray, float3& Nlight, float& area, float& distance ) {
+        float3 RandomPointOnLight( float3 I, float3& Nlight, float& area, float& distance ) {
             // currently we only have the quad as a light...
             float3 point = quad.GetRandomPoint();
-            Nlight = GetNormal( 0, point, ray.D );
+            // get the area
             area = quad.GetArea();
-            float3 toLight = point - ray.IntersectionPoint();
+            // calculate the distance
+            float3 toLight = point - I;
             distance = length( toLight );
-            return toLight / distance;
+            // calculate the normal
+            toLight = toLight / distance;
+            Nlight = GetNormal( 0, point, toLight );
+            // return direction vector
+            return toLight;
         }
 
         float3 GetNormal( int objIdx, float3 I, float3 wo ) const
