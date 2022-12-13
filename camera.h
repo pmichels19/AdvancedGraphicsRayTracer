@@ -19,7 +19,7 @@ namespace Tmpl8 {
 
         float3 randomInUnitDisk() {
             while ( true ) {
-                float3 p = float3( random_float( -1, 1 ), random_float( -1, 1 ), 0 );
+                float3 p = float3( RandomFloat() * 2.0f - 1.0f, RandomFloat() * 2.0f - 1.0f, 0 );
                 if ( sqrLength( p ) >= 1 ) continue;
                 return p;
             }
@@ -42,8 +42,8 @@ namespace Tmpl8 {
 
         Ray GetPrimaryRay( const int x, const int y ) {
             // calculate pixel position on virtual screen plane
-            const float u = (float) x * rWidth + random_float( 0, rWidth );
-            const float v = (float) y * rHeight + random_float( 0, rHeight );
+            const float u = (float) x * rWidth + Rand( rWidth );
+            const float v = (float) y * rHeight + Rand( rHeight );
 
             float3 rd = lensRadius * randomInUnitDisk();
             const float3 offset = float3( u * rd.x, v * rd.y, 0 );

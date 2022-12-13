@@ -7,7 +7,11 @@ public:
     // WHITTED STYLE RAY TRACER SUPPORT
     virtual MaterialType getFlag() const = 0;
 
+    virtual float3 GetColor( Ray& ray_in ) const = 0;
+
     virtual float* getColorModifier( Ray& ray_in, float3 N ) const = 0;
+
+    virtual bool scatter( Ray& ray_in, float3 I, float3 N, Ray& ray_out ) const = 0;
 
     // ===================================================
     // helper methods we might need in material subclasses
@@ -16,7 +20,7 @@ public:
     float3 DiffuseReflection( float3 N ) const {
         // normally distributed ray direction within the hemisphere
         while ( true ) {
-            float3 R = float3( random_float( -1.0f, 1.0f ), random_float( -1.0f, 1.0f ), random_float( -1.0f, 1.0f ) );
+            float3 R = float3( RandomFloat() * 2.0f - 1.0f, RandomFloat() * 2.0f - 1.0f, RandomFloat() * 2.0f - 1.0f );
             if ( sqrLength( R ) > 1 ) continue;
             if ( dot( R, N ) < 0 ) R = -R;
             return normalize( R );

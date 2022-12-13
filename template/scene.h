@@ -92,6 +92,17 @@ namespace Tmpl8 {
             return 4.0f * PI * r2;
         }
 
+        float3 GetRandomPoint() const {
+            float3 point = float3( 1 );
+            // normally distributed vector within a hemisphere
+            while ( sqrLength( point ) > 1 ) {
+                point = float3( RandomFloat() * 2.0f - 1.0f, RandomFloat() * 2.0f - 1.0f, RandomFloat() * 2.0f - 1.0f );
+            }
+
+            // scale it and return
+            return normalize( point ) * r2 * invr;
+        }
+
         float3 pos = 0;
         float r2 = 0, invr = 0;
         int objIdx = -1;
@@ -155,6 +166,9 @@ namespace Tmpl8 {
         }
         float GetArea() {
             return 1e30f;
+        }
+        float3 GetRandomPoint() {
+            return float3( 0 ); // TODO: not sure how to approach this
         }
         float3 N;
         float d;
@@ -311,6 +325,29 @@ namespace Tmpl8 {
             return 6.0f * size * size;
         }
 
+        float3 GetRandomPoint() const {
+            float size = b[1].x - b[0].x;
+            float u = Rand( 2.0f * size ) - size;
+            float v = Rand( 2.0f * size ) - size;
+            float faceSign = RandomFloat();
+            float3 point = float3( 0 );
+            if ( faceSign < 0.166666666667f ) {
+                point = float3( -size, u, v );
+            } else if ( faceSign < 0.333333333333f ) {
+                point = float3(  size, u, v );
+            } else if ( faceSign < 0.5f ) {
+                point = float3( u, -size, v );
+            } else if ( faceSign < 0.666666666667f ) {
+                point = float3( u,  size, v );
+            } else if ( faceSign < 0.833333333333f ) {
+                point = float3( u, v, -size );
+            } else {
+                point = float3( u, v,  size );
+            }
+
+            return TransformPosition( point, M );
+        }
+
         float3 b[2];
         mat4 M, invM;
         int objIdx = -1;
@@ -374,6 +411,11 @@ namespace Tmpl8 {
 
         float GetArea() const {
             return size * size;
+        }
+
+        float3 GetRandomPoint() const {
+            float3 randPoint = float3( size * ( RandomFloat() - 1.0f ), size * ( RandomFloat() - 1.0f ), 0.0f );
+            return TransformPosition( randPoint, T );
         }
 
         float size;
@@ -446,6 +488,17 @@ namespace Tmpl8 {
             float3 AB = B - A;
             float3 AC = C - A;
             return 0.5f * length( cross( AB, AC ) );
+        }
+
+        float3 GetRandomPoint() const {
+            float u = RandomFloat();
+            float v = RandomFloat();
+            while ( ( u + v ) > 1 ) {
+                u = RandomFloat();
+                v = RandomFloat();
+            }
+
+            return A + u * B + v * C;
         }
 
         float3 N;
@@ -540,6 +593,11 @@ namespace Tmpl8 {
             }
 
             return result;
+        }
+
+        float3 GetRandomPoint() const {
+            int triangle = (int) ( RandomFloat() * ( triangles.size() - 1 ) );
+            return triangles[triangle].GetRandomPoint();
         }
     };
 
@@ -861,10 +919,14 @@ namespace Tmpl8 {
             tet.Intersect(ray);
             teapot.Intersect( ray );
         }
-        
+
         void IntersectBVH( Ray& ray ) {
-            BVHNode* node = &bvhNode[rootNodeIdx], * stack[64];
+            // start at the root
+            BVHNode* node = &bvhNode[rootNodeIdx];
+
+            // stack stuff
             uint stackPtr = 0;
+            BVHNode* stack[64];
             while ( true ) {
                 if ( node->isLeaf() ) {
                     for ( uint i = 0; i < node->primitiveCount; i++ ) {
@@ -878,26 +940,29 @@ namespace Tmpl8 {
                         else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) teapot.Intersect( ray, teapotIdx );
                     }
 
+                    // stop the loop if we are at stack pointer 0, aka the root
                     if ( stackPtr == 0 ) break;
-                    else node = stack[--stackPtr];
+
+                    node = stack[--stackPtr];
                     continue;
                 }
 
                 BVHNode* child1 = &bvhNode[node->leftFirst];
                 BVHNode* child2 = &bvhNode[node->leftFirst + 1];
+
                 float dist1 = IntersectAABB( ray, child1->aabbMin, child1->aabbMax );
                 float dist2 = IntersectAABB( ray, child2->aabbMin, child2->aabbMax );
                 if ( dist1 > dist2 ) { 
                     swap( dist1, dist2 );
-                    swap( child1, child2 );
+                    swap( child1, child2 ); 
                 }
 
-                if ( dist1 > 1e30f - FLT_EPSILON ) {
+                if ( dist1 == 1e30f ) {
                     if ( stackPtr == 0 ) break;
                     else node = stack[--stackPtr];
                 } else {
                     node = child1;
-                    if ( dist2 < 1e30f ) stack[stackPtr++] = child2;
+                    if ( dist2 != 1e30f ) stack[stackPtr++] = child2;
                 }
             }
         }
@@ -984,6 +1049,16 @@ namespace Tmpl8 {
             }
 
             return false;
+        }
+
+        float3 RandomPointOnLight( Ray& ray, float3& Nlight, float& area, float& distance ) {
+            // currently we only have the quad as a light...
+            float3 point = quad.GetRandomPoint();
+            Nlight = GetNormal( 0, point, ray.D );
+            area = quad.GetArea();
+            float3 toLight = point - ray.IntersectionPoint();
+            distance = length( toLight );
+            return toLight / distance;
         }
 
         float3 GetNormal( int objIdx, float3 I, float3 wo ) const

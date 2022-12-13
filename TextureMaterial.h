@@ -37,7 +37,7 @@ public:
             attenuation = PI * 2.0f * BRDF * toEi;
         } else {
             // if both are > 0 we pick one randomly
-            if ( random_float( 0, 1 ) < specular ) {
+            if ( RandomFloat() < specular ) {
                 ray_out = Ray( I, normalize( reflect( ray_in.D, N ) ) );
             } else {
                 float3 R = DiffuseReflection( N );
@@ -49,6 +49,36 @@ public:
         }
 
         return true;
+    }
+
+    virtual float3 GetColor( Ray& ray_in ) const override {
+        uint u = texture->width * ray_in.u;
+        uint v = texture->height * ray_in.v;
+        uint skyIdx = ( u & ( texture->width - 1 ) ) + ( v & ( texture->height - 1 ) ) * texture->width;
+        uint p = texture->pixels[skyIdx];
+        uint3 i3( ( p >> 16 ) & 255, ( p >> 8 ) & 255, p & 255 );
+        return float3( i3 ) * correction;
+    }
+
+    virtual bool scatter( Ray& ray_in, float3 I, float3 N, Ray& ray_out ) const override {
+        if ( diffuse < FLT_EPSILON ) {
+            // if diffuse is 0, do reflection
+            ray_out = Ray( I, normalize( reflect( ray_in.D, N ) ) );
+            return true;
+        } else if ( specular < FLT_EPSILON ) {
+            // if specular is 0, do diffuse reflection
+            ray_out = Ray( I, DiffuseReflection( N ) );
+            return false;
+        }
+
+        // if both are > 0 we pick one randomly
+        if ( RandomFloat() < specular ) {
+            ray_out = Ray( I, normalize( reflect( ray_in.D, N ) ) );
+            return true;
+        }
+
+        ray_out = Ray( I, DiffuseReflection( N ) );
+        return false;
     }
 
     virtual MaterialType getFlag() const override {

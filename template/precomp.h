@@ -1652,10 +1652,6 @@ public:
 #define EPS 0.0001f
 #define SKYDOME_CORRECTION 0.00392156862745f // 1 / 255
 
-inline float random_float( const float min, const float max ) {
-	return min + ( max - min ) * rand() / ( RAND_MAX + 1.0f );
-}
-
 #include "Ray.h"
 
 // Material items

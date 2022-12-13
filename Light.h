@@ -14,6 +14,14 @@ public:
         return false;
     }
 
+    virtual float3 GetColor( Ray& ray_in ) const override {
+        return color;
+    }
+
+    virtual bool scatter( Ray& ray_in, float3 I, float3 N, Ray& ray_out ) const override {
+        return false;
+    }
+
     virtual MaterialType getFlag() const override {
         return MaterialType::LIGHT;
     }

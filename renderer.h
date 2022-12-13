@@ -6,7 +6,7 @@ namespace Tmpl8 {
     public:
         // game flow methods
         void Init();
-        float3 Trace( Ray& ray, int depth = 50 );
+        float3 Trace( Ray& ray, int depth = 10, bool lastSpecular = true );
 
         float3 WhittedTrace( Ray& ray, int depth = 20 );
 

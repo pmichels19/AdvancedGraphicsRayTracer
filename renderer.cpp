@@ -12,33 +12,51 @@ void Renderer::Init() {
 // -----------------------------------------------------------
 // Evaluate light transport
 // -----------------------------------------------------------
-float3 Renderer::Trace( Ray& ray, int depth ) {
-    bool continues;
-    float3 result = float3( 1.0f );
-    for ( int d = depth; d >= 0; d-- ) {
-        //scene.FindNearest( ray );
-        scene.IntersectBVH( ray );
+float3 Renderer::Trace( Ray& ray, int depth, bool lastSpecular ) {
+    if ( depth == 0 ) return float3( 0 );
+    // intersect the ray with the scene
+    scene.IntersectBVH( ray );
 
-        // if we hit nothing return a sky color
-        if ( ray.objIdx == -1 ) {
-            return result * skyColor( ray.D );
+    // if we hit nothing return a sky color
+    if ( ray.objIdx == -1 ) return skyColor( ray.D );
+
+    // fetch intersection point, normal and material
+    float3 I = ray.O + ray.t * ray.D;
+    float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
+    shared_ptr<ObjectMaterial> mat = scene.GetMaterial( ray.objIdx );
+    // material calls
+    float3 albedo = mat->GetColor( ray );
+    Ray ray_out;
+    bool specularBounce = mat->scatter( ray, I, N, ray_out );
+    MaterialType flag = mat->getFlag();
+
+    if ( flag == DIFFUSE ) {
+        float3 BRDF = albedo * INVPI;
+        float3 Ei = Trace( ray_out, depth - 1, specularBounce ) * dot( N, ray_out.D );
+        return PI * 2.0f * BRDF * Ei;// + Ld
+    } else if ( flag == SPECULAR ) {
+        return albedo * Trace( ray_out, depth - 1, specularBounce );
+    } else if ( flag == MIX ) {
+        if ( specularBounce ) {
+            // if we did a specular bounce, simply return color * recurse
+            return albedo * Trace( ray_out, depth - 1, specularBounce );
         }
 
-        // fetch intersection point, normal and material
-        float3 I = ray.O + ray.t * ray.D;
-        float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
-        shared_ptr<ObjectMaterial> mat = scene.GetMaterial( ray.objIdx );
+        // otherwise, bounce and check direct lights
+        float3 BRDF = albedo * INVPI;
+        float3 Ei = Trace( ray_out, depth - 1, specularBounce ) * dot( N, ray_out.D );
+        return PI * 2.0f * BRDF * Ei;// + Ld
+    } else if ( flag == DIELECTRIC ) {
+        return albedo * Trace( ray_out, depth - 1, specularBounce );
+    } else if ( flag == LIGHT ) {
+        if ( lastSpecular ) return albedo;
 
-        float3 color;
-        Ray ray_out;
-        continues = mat->bounce( ray, I, N, color, ray_out );
-        result *= color;
-        if ( !continues ) return result;
-
-        ray = ray_out;
+        return float3( 0.0f );
     }
 
-    return result;
+    // we shouldn't be able to get here
+    printf("!!! path tracer ran into undefined material flag !!!\n");
+    return float3( 0.0f );
 }
 
 float3 Renderer::WhittedTrace( Ray& ray, int depth ) {
