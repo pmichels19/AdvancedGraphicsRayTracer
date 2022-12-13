@@ -17,7 +17,10 @@ public:
             // if specular is 0, do diffuse reflection
             float3 R = DiffuseReflection( N );
             ray_out = Ray( I, R );
-            attenuation *= 2.0f * dot( N, R );
+
+            float3 BRDF = attenuation * INVPI;
+            float toEi = dot( N, R );
+            attenuation = PI * 2.0f * BRDF * toEi;
         } else {
             // if both are > 0 we pick one randomly
             if ( random_float( 0, 1 ) < specular ) {
@@ -25,7 +28,10 @@ public:
             } else {
                 float3 R = DiffuseReflection( N );
                 ray_out = Ray( I, R );
-                attenuation *= 2.0f * dot( N, R );
+
+                float3 BRDF = attenuation * INVPI;
+                float toEi = dot( N, R );
+                attenuation = PI * 2.0f * BRDF * toEi;
             }
         }
 
