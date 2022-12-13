@@ -54,7 +54,9 @@ float3 Renderer::WhittedTrace( Ray& ray, int depth ) {
 
     MaterialType flag = mat->getFlag();
     float* colorVars = mat->getColorModifier( ray, N );
-    if ( flag == MaterialType::DIFFUSE ) {
+    if ( flag == MaterialType::LIGHT ) {
+        result += scene.GetLightColor();
+    } else if ( flag == MaterialType::DIFFUSE ) {
         // purely diffuse
         result += DirectIllumination( I, N );
     } else if ( flag == MaterialType::SPECULAR ) {

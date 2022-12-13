@@ -879,7 +879,7 @@ namespace Tmpl8 {
             return 1e30f;
         }
 
-        bool IsOccluded( Ray& ray ) const {
+        bool IsOccludedOld( Ray& ray ) const {
             float rayLength = ray.t;
             // skip planes: it is not possible for the walls to occlude anything
             quad.Intersect( ray );
@@ -896,6 +896,53 @@ namespace Tmpl8 {
             // - we store objIdx and t when we just need a yes/no
             // - we don't 'early out' after the first occlusion
         }
+
+        bool IsOccluded( Ray& ray ) {
+            float rayLength = ray.t;
+
+            BVHNode* node = &bvhNode[rootNodeIdx], * stack[64];
+            uint stackPtr = 0;
+            while ( true ) {
+                if ( node->isLeaf() ) {
+                    for ( uint i = 0; i < node->primitiveCount; i++ ) {
+                        int objIdx = primitiveIndices[node->leftFirst + i];
+                        if ( objIdx == 0 ) quad.Intersect( ray );
+                        else if ( objIdx == 1 ) sphere.Intersect( ray );
+                        else if ( objIdx == 2 ) cube.Intersect( ray );
+                        else if ( objIdx == 3 ) triangle.Intersect( ray );
+                        else if ( objIdx == 4 ) groundQuad.Intersect( ray );
+                        else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) tet.Intersect( ray, tetIdx );
+                        else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) teapot.Intersect( ray, teapotIdx );
+
+                        if ( ray.t < rayLength && ray.t > EPS ) return true;
+                    }
+
+                    if ( stackPtr == 0 ) break;
+                    else node = stack[--stackPtr];
+                    continue;
+                }
+
+                BVHNode* child1 = &bvhNode[node->leftFirst];
+                BVHNode* child2 = &bvhNode[node->leftFirst + 1];
+                float dist1 = IntersectAABB( ray, child1->aabbMin, child1->aabbMax );
+                float dist2 = IntersectAABB( ray, child2->aabbMin, child2->aabbMax );
+                if ( dist1 > dist2 ) {
+                    swap( dist1, dist2 );
+                    swap( child1, child2 );
+                }
+
+                if ( dist1 > 1e30f - FLT_EPSILON ) {
+                    if ( stackPtr == 0 ) break;
+                    else node = stack[--stackPtr];
+                } else {
+                    node = child1;
+                    if ( dist2 < 1e30f ) stack[stackPtr++] = child2;
+                }
+            }
+
+            return false;
+        }
+
         float3 GetNormal( int objIdx, float3 I, float3 wo ) const
         {
             // we get the normal after finding the nearest intersection:

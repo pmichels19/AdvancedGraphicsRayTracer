@@ -15,7 +15,7 @@ public:
     }
 
     virtual MaterialType getFlag() const override {
-        return MaterialType::DIFFUSE; // we consider lights diffuse
+        return MaterialType::LIGHT;
     }
 
     virtual float* getColorModifier( Ray& ray_in, float3 N ) const {

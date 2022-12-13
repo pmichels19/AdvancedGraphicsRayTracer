@@ -28,17 +28,10 @@ namespace Tmpl8 {
                 intersectionToLight /= distance;
                 float dotDN = dot( intersectionToLight, N );
 
-                if ( dotDN < 0 ) {
-                    continue;
-                }
-
-                if ( dot( scene.GetLightDir(), intersectionToLight ) > 0 ) continue;
+                if ( dotDN < 0 || dot( scene.GetLightDir(), intersectionToLight ) > 0 ) continue;
 
                 Ray toLight = Ray( I, intersectionToLight, distance - ( 2 * EPS ) );
-                // return black if no light source connects or if we are facing the occluded side of an object
-                if ( scene.IsOccluded( toLight ) ) { // TODO: IsOccluded is super slow atm!
-                    continue;
-                }
+                if ( scene.IsOccluded( toLight ) ) continue;
 
                 result += ( dotDN / ( distance * distance ) ) * scene.GetLightColor();
             }

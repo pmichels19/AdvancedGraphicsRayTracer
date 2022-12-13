@@ -4,5 +4,6 @@ enum MaterialType {
     DIFFUSE = 0,
     SPECULAR = 1,
     MIX = 2,
-    DIELECTRIC = 3
+    DIELECTRIC = 3,
+    LIGHT = 4
 };
