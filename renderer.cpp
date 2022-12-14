@@ -32,32 +32,31 @@ float3 Renderer::Trace( Ray& ray, int depth, bool lastSpecular ) {
     MaterialType flag = mat->getFlag();
 
     if ( flag == DIFFUSE ) {
-        // diffuse = 2pi * BRDF * irradiance + direct lighting
+        // === DIFFUSE ===
         float3 BRDF = albedo * INVPI;
         float3 Ld = NextEventDirectIllumination( I, N, albedo, BRDF );
         float3 Ei = Trace( ray_out, depth - 1, specularBounce ) * dot( N, ray_out.D );
         return PI * 2.0f * BRDF * Ei + Ld;
     } else if ( flag == SPECULAR ) {
-        // specular is simple reflection * material albedo
+        // === SPECULAR ===
         return albedo * Trace( ray_out, depth - 1, specularBounce );
     } else if ( flag == MIX ) {
         if ( specularBounce ) {
-            // specular is simple reflection * material albedo
+            // === SPECULAR ===
             return albedo * Trace( ray_out, depth - 1, specularBounce );
         }
 
-        // diffuse = 2pi * BRDF * irradiance + direct lighting
+        // === DIFFUSE ===
         float3 BRDF = albedo * INVPI;
         float3 Ld = NextEventDirectIllumination( I, N, albedo, BRDF );
         float3 Ei = Trace( ray_out, depth - 1, specularBounce ) * dot( N, ray_out.D );
         return PI * 2.0f * BRDF * Ei + Ld;
     } else if ( flag == DIELECTRIC ) {
-        // similar thing for dielectrics as for specular materials. Applies Beer's law using the GetColor and ray.inside
+        // === DIELECTRIC ===
         return albedo * Trace( ray_out, depth - 1, specularBounce );
     } else if ( flag == LIGHT ) {
-        // lights are the easiest, only return color if we got there from a specular surface or the camera
+        // === LIGHT ===
         if ( lastSpecular ) return albedo;
-        // black otherwise
         return float3( 0.0f );
     }
 
