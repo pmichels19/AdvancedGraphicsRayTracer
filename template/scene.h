@@ -721,7 +721,7 @@ namespace Tmpl8 {
             return aabbMax;
         }
 
-        float3 GetArea( int objIdx ) {
+        float GetArea( int objIdx ) {
             float area = 0.0f;
             if ( objIdx == 0 ) area = quad.GetArea();
             else if ( objIdx == 1 ) area = sphere.GetArea();
@@ -890,6 +890,21 @@ namespace Tmpl8 {
             // sphere animation: bounce
             float tm = 1 - sqrf( fmodf( animTime, 2.0f ) - 1 );
             sphere.pos = float3( -1.4f, -0.5f + tm, 2 );
+        }
+        int GetRandomLight() const {
+            return 0; // only one light atm...
+        }
+        float3 GetLightColor( int objIdx, Ray& ray ) {
+            return GetMaterial( objIdx )->GetColor( ray );
+        }
+        float3 GetLightPos( int objIdx ) const {
+            if ( objIdx == 0 ) return quad.GetRandomPoint();
+            else if ( objIdx == 1 ) return sphere.GetRandomPoint();
+            else if ( objIdx == 2 ) return cube.GetRandomPoint();
+            else if ( objIdx == 3 ) return triangle.GetRandomPoint();
+            else if ( objIdx == 4 ) return groundQuad.GetRandomPoint();
+            else if ( tet.hasObject( objIdx ) != -1 ) return tet.GetRandomPoint();
+            else if ( teapot.hasObject( objIdx ) != -1 ) return teapot.GetRandomPoint();
         }
         float3 GetLightPos() const
         {

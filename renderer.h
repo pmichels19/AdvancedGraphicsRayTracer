@@ -39,20 +39,32 @@ namespace Tmpl8 {
             return result / (float) samples;
         }
 
-        float3 NextEventDirectIllumination( float3 I, float3 N, float3 albedo, float3 BRDF ) {
-            float area;
-            float distance;
-            float3 Nl;
-            float3 L = scene.RandomPointOnLight( I, Nl, area, distance );
-            Ray toLight( I, L, distance - 2.0f * EPS );
+        float3 NextEventDirectIllumination( float3 I, float3 N, float3 BRDF ) {
+            // pick a random light
+            int light = scene.GetRandomLight();
+            // then a random position on that light
+            float3 Ilight = scene.GetLightPos( light );
+            // get the area
+            float area = scene.GetArea( light );
+            // get the vector from I to the random postion on the light
+            float3 L = Ilight - I;
+            // get the distance from I to that random postion
+            float distance = length( L );
+            // normalize
+            L /= distance;
+            // get the normal at the randomly chosen point
+            float3 Nl = scene.GetNormal( light, Ilight, L );
 
             float dotNL = dot( N, L );
             float dotNlL = dot( Nl, -L );
             float3 Ld = float3( 0.0f );
             if ( dotNL > 0 && dotNlL > 0 ) {
+                // make a ray from I to the light source
+                Ray toLight( I, L, distance - 2.0f * EPS );
+
                 if ( !scene.IsOccluded( toLight ) ) {
                     float solidAngle = ( dotNlL * area ) / ( distance * distance );
-                    Ld = albedo * solidAngle * BRDF * dotNL; // TODO: currently we have only one hardcoded light...that might change
+                    Ld = scene.GetLightColor( light, toLight ) * solidAngle * BRDF * dotNL; // TODO: currently we have only one hardcoded light...that might change
                 }
             }
 

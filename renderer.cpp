@@ -34,7 +34,7 @@ float3 Renderer::Trace( Ray& ray, int depth, bool lastSpecular ) {
     if ( flag == DIFFUSE ) {
         // === DIFFUSE ===
         float3 BRDF = albedo * INVPI;
-        float3 Ld = NextEventDirectIllumination( I, N, albedo, BRDF );
+        float3 Ld = NextEventDirectIllumination( I, N, BRDF );
         float3 Ei = Trace( ray_out, depth - 1, specularBounce ) * dot( N, ray_out.D );
         return PI * 2.0f * BRDF * Ei + Ld;
     } else if ( flag == SPECULAR ) {
@@ -48,7 +48,7 @@ float3 Renderer::Trace( Ray& ray, int depth, bool lastSpecular ) {
 
         // === DIFFUSE ===
         float3 BRDF = albedo * INVPI;
-        float3 Ld = NextEventDirectIllumination( I, N, albedo, BRDF );
+        float3 Ld = NextEventDirectIllumination( I, N, BRDF );
         float3 Ei = Trace( ray_out, depth - 1, specularBounce ) * dot( N, ray_out.D );
         return PI * 2.0f * BRDF * Ei + Ld;
     } else if ( flag == DIELECTRIC ) {
