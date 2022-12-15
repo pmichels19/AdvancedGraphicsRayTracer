@@ -1066,21 +1066,6 @@ namespace Tmpl8 {
             return false;
         }
 
-        float3 RandomPointOnLight( float3 I, float3& Nlight, float& area, float& distance ) {
-            // currently we only have the quad as a light...
-            float3 point = quad.GetRandomPoint();
-            // get the area
-            area = quad.GetArea();
-            // calculate the distance
-            float3 toLight = point - I;
-            distance = length( toLight );
-            // calculate the normal
-            toLight = toLight / distance;
-            Nlight = GetNormal( 0, point, toLight );
-            // return direction vector
-            return toLight;
-        }
-
         float3 GetNormal( int objIdx, float3 I, float3 wo ) const
         {
             // we get the normal after finding the nearest intersection:
