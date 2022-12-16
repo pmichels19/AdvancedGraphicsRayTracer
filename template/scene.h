@@ -614,10 +614,10 @@ namespace Tmpl8 {
         Scene()
         {
             // make the Materials
-            red = make_shared<Diffuse>( Diffuse( float3( 1.0f, 0.0f, 0.0f ) ) );
-            green = make_shared<Diffuse>( Diffuse( float3( 0.0f, 1.0f, 0.0f ) ) );
-            blue = make_shared<Diffuse>( Diffuse( float3( 0.0f, 0.0f, 1.0f ) ) );
-            white = make_shared<Diffuse>( Diffuse( float3( 1.0f, 1.0f, 1.0f ) ) );
+            red = make_shared<Diffuse>( Diffuse( float3( 0.95f, 0.05f, 0.05f ) ) );
+            green = make_shared<Diffuse>( Diffuse( float3( 0.05f, 0.95f, 0.05f ) ) );
+            blue = make_shared<Diffuse>( Diffuse( float3( 0.05f, 0.05f, 0.95f ) ) );
+            white = make_shared<Diffuse>( Diffuse( float3( 0.95f, 0.95f, 0.95f ) ) );
 
             mirror = make_shared<Mirror>( Mirror( float3( 0.9f, 0.9f, 0.9f ) ) );
 
@@ -626,7 +626,7 @@ namespace Tmpl8 {
             checkerboard = make_shared<Checkerboard>( Checkerboard( float3( 0.1f, 0.1f, 0.1f ), float3( 0.9f, 0.9f, 0.9f ), 0.95f ) );
 
             glass = make_shared<Dielectric>( Dielectric( float3( 0.5f, 0.5f, 0.5f ), 1.52f ) );
-            diamond = make_shared<Dielectric>( Dielectric( float3( 4.0f, 1.0f, 0.7f ), 2.42f ) );
+            diamond = make_shared<Dielectric>( Dielectric( float3( 2.0f, 0.5f, 0.7f ), 2.42f ) );
 
             lamp = make_shared<Light>( Light( float3( 24.0f, 24.0f, 22.0f ), float3( 0.0f, -1.0f, 0.0f ) ) );
 

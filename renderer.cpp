@@ -34,9 +34,10 @@ float3 Renderer::Trace( Ray& ray, int depth, bool lastSpecular ) {
     if ( flag == DIFFUSE ) {
         // === DIFFUSE ===
         float3 BRDF = albedo * INVPI;
+        float PDF = INV2PI;
         float3 Ld = NextEventDirectIllumination( I, N, BRDF );
-        float3 Ei = Trace( ray_out, depth - 1, specularBounce ) * dot( N, ray_out.D );
-        return PI * 2.0f * BRDF * Ei + Ld;
+        float3 Ei = Trace( ray_out, depth - 1, specularBounce ) * dot( N, ray_out.D ) / PDF;
+        return BRDF * Ei + Ld;
     } else if ( flag == SPECULAR ) {
         // === SPECULAR ===
         return albedo * Trace( ray_out, depth - 1, specularBounce );
@@ -48,9 +49,10 @@ float3 Renderer::Trace( Ray& ray, int depth, bool lastSpecular ) {
 
         // === DIFFUSE ===
         float3 BRDF = albedo * INVPI;
+        float PDF = INV2PI;
         float3 Ld = NextEventDirectIllumination( I, N, BRDF );
-        float3 Ei = Trace( ray_out, depth - 1, specularBounce ) * dot( N, ray_out.D );
-        return PI * 2.0f * BRDF * Ei + Ld;
+        float3 Ei = Trace( ray_out, depth - 1, specularBounce ) * dot( N, ray_out.D ) / PDF;
+        return BRDF * Ei + Ld;
     } else if ( flag == DIELECTRIC ) {
         // === DIELECTRIC ===
         return albedo * Trace( ray_out, depth - 1, specularBounce );
@@ -138,6 +140,7 @@ void Renderer::Tick( float deltaTime ) {
     if (!stationary) camera.AdjustCamera(yaw, pitch, roll, xMove, yMove, zMove);
     // pixel loop
     Timer t;
+    float totalEnergy = 0.0f;
     // lines are executed as OpenMP parallel tasks (disabled in DEBUG)
 #pragma omp parallel for schedule(dynamic)
     for ( int y = 0; y < SCRHEIGHT; y += 4 ) {
@@ -165,6 +168,7 @@ void Renderer::Tick( float deltaTime ) {
                     accumulator[accIdx] = accumulator[accIdx] + ( 1.0f / accumulator[accIdx].w ) * ( float4( ( 1.0f / (float) samples ) * result, accumulator[accIdx].w ) - accumulator[accIdx] );
                     // translate accumulator contents to rgb32 pixels
                     screen->pixels[accIdx] = RGBF32_to_RGB8( &accumulator[accIdx] );
+                    totalEnergy += accumulator[accIdx].x + accumulator[accIdx].y + accumulator[accIdx].z;
                 }
             }
         }
@@ -177,5 +181,5 @@ void Renderer::Tick( float deltaTime ) {
     avg = ( 1 - alpha ) * avg + alpha * t.elapsed() * 1000;
     if ( alpha > 0.05f ) alpha *= 0.5f;
     float fps = 1000 / avg, rps = ( SCRWIDTH * SCRHEIGHT ) * fps;
-    printf( "%5.2fms (%.1fps) - %.1fMrays/s\n", avg, fps, rps / 1000000 );
+    printf( "%5.2fms (%.1fps) - %.1fMrays/s\t\t%.1f\n", avg, fps, rps / 1000000, totalEnergy );
 }

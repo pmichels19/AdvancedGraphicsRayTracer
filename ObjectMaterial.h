@@ -17,12 +17,39 @@ public:
 
     float3 DiffuseReflection( float3 N ) const {
         // normally distributed ray direction within the hemisphere
-        while ( true ) {
-            float3 R = float3( RandomFloat() * 2.0f - 1.0f, RandomFloat() * 2.0f - 1.0f, RandomFloat() * 2.0f - 1.0f );
-            if ( sqrLength( R ) > 1 ) continue;
-            if ( dot( R, N ) < 0 ) R = -R;
-            return normalize( R );
+        //while ( true ) {
+        //    float3 R = float3( RandomFloat() * 2.0f - 1.0f, RandomFloat() * 2.0f - 1.0f, RandomFloat() * 2.0f - 1.0f );
+        //    if ( sqrLength( R ) > 1 ) continue;
+        //    if ( dot( R, N ) < 0 ) R = -R;
+        //    return normalize( R );
+        //}
+
+        float r0 = RandomFloat();
+        float r1 = RandomFloat();
+
+        float r = sqrtf( r0 );
+        float z = sqrtf( 1 - r0 );
+
+        float theta = TWOPI * r1;
+        float x = r * cosf( theta );
+        float y = r * sinf( theta );
+        float3 direction( x, y, z );
+        direction = normalize( direction );
+
+        // set up the local axis system for N
+        // FIXME: this...doesn't work :c
+        float3 axisSystem[3];
+        axisSystem[0] = float3( 0.0f, -1.0f, 0.0f );
+        axisSystem[1] = float3( -1.0f, 0.0f, 0.0f );
+        axisSystem[2] = N;
+        if ( N.z + 1.0f > FLT_EPSILON ) {
+            const float a = 1.0f / ( 1.0f + N.z );
+            const float b = -N.x * N.y * a;
+            axisSystem[1] = float3( 1.0f - N.x * N.x * a, b, -N.x );
+            axisSystem[0] = float3( b, 1.0f - N.y * N.y * a, -N.y );
         }
+
+        return normalize( direction.x * axisSystem[0] + direction.y * axisSystem[1] + direction.z * axisSystem[2] );
     }
 
     float Fresnel( float n1, float n2, float cost, float cosi ) const {
