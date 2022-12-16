@@ -36,6 +36,10 @@ public:
         float3 direction( x, y, z );
         direction = normalize( direction );
 
+        return mapToNormalAxis( direction, N );
+    }
+
+    float3 mapToNormalAxis( float3 D, float3 N ) const {
         // set up the local axis system for N
         // used the system proposed here: https://backend.orbit.dtu.dk/ws/portalfiles/portal/126824972/onb_frisvad_jgt2012_v2.pdf
         float3 axisSystem[3];
@@ -49,7 +53,7 @@ public:
             axisSystem[1] = float3( b, 1.0f - N.y * N.y * a, -N.y );
         }
 
-        return normalize( direction.x * axisSystem[0] + direction.y * axisSystem[1] + direction.z * axisSystem[2] );
+        return normalize( D.x * axisSystem[0] + D.y * axisSystem[1] + D.z * axisSystem[2] );
     }
 
     float Fresnel( float n1, float n2, float cost, float cosi ) const {
