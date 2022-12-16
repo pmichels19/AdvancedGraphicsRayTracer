@@ -26,17 +26,13 @@ public:
 
         float r0 = RandomFloat();
         float r1 = RandomFloat();
-
         float r = sqrtf( r0 );
-        float z = sqrtf( 1 - r0 );
-
         float theta = TWOPI * r1;
+
         float x = r * cosf( theta );
         float y = r * sinf( theta );
-        float3 direction( x, y, z );
-        direction = normalize( direction );
-
-        return mapToNormalAxis( direction, N );
+        float z = sqrtf( 1 - r0 );
+        return mapToNormalAxis( float3( x, y, z ), N );
     }
 
     float3 mapToNormalAxis( float3 D, float3 N ) const {
