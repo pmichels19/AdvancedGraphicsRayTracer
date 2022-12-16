@@ -37,7 +37,7 @@ public:
         direction = normalize( direction );
 
         // set up the local axis system for N
-        // FIXME: this...doesn't work :c
+        // used the system proposed here: https://backend.orbit.dtu.dk/ws/portalfiles/portal/126824972/onb_frisvad_jgt2012_v2.pdf
         float3 axisSystem[3];
         axisSystem[0] = float3( 0.0f, -1.0f, 0.0f );
         axisSystem[1] = float3( -1.0f, 0.0f, 0.0f );
@@ -45,8 +45,8 @@ public:
         if ( N.z + 1.0f > FLT_EPSILON ) {
             const float a = 1.0f / ( 1.0f + N.z );
             const float b = -N.x * N.y * a;
-            axisSystem[1] = float3( 1.0f - N.x * N.x * a, b, -N.x );
-            axisSystem[0] = float3( b, 1.0f - N.y * N.y * a, -N.y );
+            axisSystem[0] = float3( 1.0f - N.x * N.x * a, b, -N.x );
+            axisSystem[1] = float3( b, 1.0f - N.y * N.y * a, -N.y );
         }
 
         return normalize( direction.x * axisSystem[0] + direction.y * axisSystem[1] + direction.z * axisSystem[2] );
