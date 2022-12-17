@@ -139,6 +139,7 @@
     <ClInclude Include="MaterialType.h" />
     <ClInclude Include="Mirror.h" />
     <ClInclude Include="ObjectMaterial.h" />
+    <ClInclude Include="Primitive.h" />
     <ClInclude Include="Ray.h" />
     <ClInclude Include="renderer.h" />
     <ClInclude Include="template\common.h" />
