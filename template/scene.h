@@ -317,7 +317,11 @@ namespace Tmpl8 {
         float3 GetLightDir() const {
             return float3( 0.0f, -1.0f, 0.0f );
         }
-
+        void FindNearest( Ray& ray ) {
+            for ( uint idx : primitiveIndices ) {
+                primitives[idx].Intersect( ray );
+            }
+        }
         void IntersectBVH( Ray& ray ) {
             BVHNode* node = &bvhNode[rootNodeIdx];
             BVHNode* stack[64];

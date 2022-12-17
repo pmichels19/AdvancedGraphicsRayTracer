@@ -16,6 +16,7 @@ float3 Renderer::Trace( Ray& ray, int depth, bool lastSpecular ) {
     if ( depth == 0 ) return float3( 0 );
     // intersect the ray with the scene
     scene.IntersectBVH( ray );
+    //scene.FindNearest( ray );
 
     // if we hit nothing return a sky color
     if ( ray.objIdx == -1 ) return skyColor( ray.D );
