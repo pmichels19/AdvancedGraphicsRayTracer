@@ -732,7 +732,6 @@ namespace Tmpl8 {
             }
 
             bvhNode = (BVHNode*) MALLOC64( ( 2 * primitiveCount + 1 ) * sizeof( BVHNode ) );
-            nodesUsed = 2; // skip a node because memory alignment
             BuildBVH();
             printf( "Finished BVH!\n" );
 
@@ -751,6 +750,7 @@ namespace Tmpl8 {
             BVHNode& root = bvhNode[rootNodeIdx];
             root.leftFirst = 0;
             root.primitiveCount = primitiveCount;
+            nodesUsed = 2; // skip a node because memory alignment
 
             UpdateNodeBounds( rootNodeIdx );
             Subdivide( rootNodeIdx );
@@ -758,11 +758,11 @@ namespace Tmpl8 {
 
         float3 GetCentroid( int objIdx ) {
             float3 centroid = float3( 0 );
-            if ( objIdx == 0 ) centroid = quad.GetCentroid();
-            else if ( objIdx == 1 ) centroid = sphere.GetCentroid();
-            else if ( objIdx == 2 ) centroid = cube.GetCentroid();
-            else if ( objIdx == 3 ) centroid = triangle.GetCentroid();
-            else if ( objIdx == 4 ) centroid = groundQuad.GetCentroid();
+            if ( objIdx == quad.objIdx ) centroid = quad.GetCentroid();
+            else if ( objIdx == sphere.objIdx ) centroid = sphere.GetCentroid();
+            else if ( objIdx == cube.objIdx ) centroid = cube.GetCentroid();
+            else if ( objIdx == triangle.objIdx ) centroid = triangle.GetCentroid();
+            else if ( objIdx == groundQuad.objIdx ) centroid = groundQuad.GetCentroid();
             else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) centroid = tet.GetCentroid( tetIdx );
             else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) centroid = teapot.GetCentroid( teapotIdx );
 
@@ -771,11 +771,11 @@ namespace Tmpl8 {
 
         float3 GetAABBMin( int objIdx ) {
             float3 aabbMin = float3( 0 );
-            if ( objIdx == 0 ) aabbMin = quad.GetAABBMin();
-            else if ( objIdx == 1 ) aabbMin = sphere.GetAABBMin();
-            else if ( objIdx == 2 ) aabbMin = cube.GetAABBMin();
-            else if ( objIdx == 3 ) aabbMin = triangle.GetAABBMin();
-            else if ( objIdx == 4 ) aabbMin = groundQuad.GetAABBMin();
+            if ( objIdx == quad.objIdx ) aabbMin = quad.GetAABBMin();
+            else if ( objIdx == sphere.objIdx ) aabbMin = sphere.GetAABBMin();
+            else if ( objIdx == cube.objIdx ) aabbMin = cube.GetAABBMin();
+            else if ( objIdx == triangle.objIdx ) aabbMin = triangle.GetAABBMin();
+            else if ( objIdx == groundQuad.objIdx ) aabbMin = groundQuad.GetAABBMin();
             else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) aabbMin = tet.GetAABBMin( tetIdx );
             else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) aabbMin = teapot.GetAABBMin( teapotIdx );
 
@@ -784,11 +784,11 @@ namespace Tmpl8 {
 
         float3 GetAABBMax( int objIdx ) {
             float3 aabbMax = float3( 0 );
-            if ( objIdx == 0 ) aabbMax = quad.GetAABBMax();
-            else if ( objIdx == 1 ) aabbMax = sphere.GetAABBMax();
-            else if ( objIdx == 2 ) aabbMax = cube.GetAABBMax();
-            else if ( objIdx == 3 ) aabbMax = triangle.GetAABBMax();
-            else if ( objIdx == 4 ) aabbMax = groundQuad.GetAABBMax();
+            if ( objIdx == quad.objIdx ) aabbMax = quad.GetAABBMax();
+            else if ( objIdx == sphere.objIdx ) aabbMax = sphere.GetAABBMax();
+            else if ( objIdx == cube.objIdx ) aabbMax = cube.GetAABBMax();
+            else if ( objIdx == triangle.objIdx ) aabbMax = triangle.GetAABBMax();
+            else if ( objIdx == groundQuad.objIdx ) aabbMax = groundQuad.GetAABBMax();
             else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) aabbMax = tet.GetAABBMax( tetIdx );
             else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) aabbMax = teapot.GetAABBMax( teapotIdx );
 
@@ -797,11 +797,11 @@ namespace Tmpl8 {
 
         float GetArea( int objIdx ) {
             float area = 0.0f;
-            if ( objIdx == 0 ) area = quad.GetArea();
-            else if ( objIdx == 1 ) area = sphere.GetArea();
-            else if ( objIdx == 2 ) area = cube.GetArea();
-            else if ( objIdx == 3 ) area = triangle.GetArea();
-            else if ( objIdx == 4 ) area = groundQuad.GetArea();
+            if ( objIdx == quad.objIdx ) area = quad.GetArea();
+            else if ( objIdx == sphere.objIdx ) area = sphere.GetArea();
+            else if ( objIdx == cube.objIdx ) area = cube.GetArea();
+            else if ( objIdx == triangle.objIdx ) area = triangle.GetArea();
+            else if ( objIdx == groundQuad.objIdx ) area = groundQuad.GetArea();
             else if ( tet.hasObject( objIdx ) != -1 ) area = tet.GetArea();
             else if ( teapot.hasObject( objIdx ) != -1 ) area = teapot.GetArea();
 
@@ -931,22 +931,15 @@ namespace Tmpl8 {
         }
 
         shared_ptr<ObjectMaterial> GetMaterial( int objIdx ) {
-            switch ( objIdx ) {
-                case 0:     // light panel
-                    return lamp;
-                case 1:     // bouncing ball
-                    return earth;
-                case 2:     // cube
-                    return diamond;
-                case 3:    // triangle
-                    return mix;
-                case 4:    // ground quad
-                    return checkerboard;
-                default:
-                    if ( tet.hasObject( objIdx ) != -1 ) return mirror;
-                    if ( teapot.hasObject( objIdx ) != -1 ) return white;
-                    return white;
-            }
+            if ( objIdx == quad.objIdx ) return lamp;
+            else if ( objIdx == sphere.objIdx ) return earth;
+            else if ( objIdx == cube.objIdx ) return diamond;
+            else if ( objIdx == triangle.objIdx ) return mix;
+            else if ( objIdx == groundQuad.objIdx ) return checkerboard;
+            else if ( tet.hasObject( objIdx ) != -1 ) return mirror;
+            else if ( teapot.hasObject( objIdx ) != -1 ) return white;
+
+            return white;
         }
         void SetTime( float t )
         {
@@ -972,11 +965,11 @@ namespace Tmpl8 {
             return GetMaterial( objIdx )->GetColor( ray );
         }
         float3 GetLightPos( int objIdx ) const {
-            if ( objIdx == 0 ) return quad.GetRandomPoint();
-            else if ( objIdx == 1 ) return sphere.GetRandomPoint();
-            else if ( objIdx == 2 ) return cube.GetRandomPoint();
-            else if ( objIdx == 3 ) return triangle.GetRandomPoint();
-            else if ( objIdx == 4 ) return groundQuad.GetRandomPoint();
+            if ( objIdx == quad.objIdx ) return quad.GetRandomPoint();
+            else if ( objIdx == sphere.objIdx ) return sphere.GetRandomPoint();
+            else if ( objIdx == cube.objIdx ) return cube.GetRandomPoint();
+            else if ( objIdx == triangle.objIdx ) return triangle.GetRandomPoint();
+            else if ( objIdx == groundQuad.objIdx ) return groundQuad.GetRandomPoint();
             else if ( tet.hasObject( objIdx ) != -1 ) return tet.GetRandomPoint();
             else if ( teapot.hasObject( objIdx ) != -1 ) return teapot.GetRandomPoint();
         }
@@ -1020,11 +1013,11 @@ namespace Tmpl8 {
                 if ( node->isLeaf() ) {
                     for ( uint i = 0; i < node->primitiveCount; i++ ) {
                         int objIdx = primitiveIndices[node->leftFirst + i];
-                        if ( objIdx == 0 ) quad.Intersect( ray );
-                        else if ( objIdx == 1 ) sphere.Intersect( ray );
-                        else if ( objIdx == 2 ) cube.Intersect( ray );
-                        else if ( objIdx == 3 ) triangle.Intersect( ray );
-                        else if ( objIdx == 4 ) groundQuad.Intersect( ray );
+                        if ( objIdx == quad.objIdx ) quad.Intersect( ray );
+                        else if ( objIdx == sphere.objIdx ) sphere.Intersect( ray );
+                        else if ( objIdx == cube.objIdx ) cube.Intersect( ray );
+                        else if ( objIdx == triangle.objIdx ) triangle.Intersect( ray );
+                        else if ( objIdx == groundQuad.objIdx ) groundQuad.Intersect( ray );
                         else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) tet.Intersect( ray, tetIdx );
                         else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) teapot.Intersect( ray, teapotIdx );
                     }
@@ -1104,11 +1097,11 @@ namespace Tmpl8 {
                 if ( node->isLeaf() ) {
                     for ( uint i = 0; i < node->primitiveCount; i++ ) {
                         int objIdx = primitiveIndices[node->leftFirst + i];
-                        if ( objIdx == 0 ) isOccluded = quad.Hit( ray );
-                        else if ( objIdx == 1 ) isOccluded = sphere.Hit( ray );
-                        else if ( objIdx == 2 ) isOccluded = cube.Hit( ray );
-                        else if ( objIdx == 3 ) isOccluded = triangle.Hit( ray );
-                        else if ( objIdx == 4 ) isOccluded = groundQuad.Hit( ray );
+                        if ( objIdx == quad.objIdx ) isOccluded = quad.Hit( ray );
+                        else if ( objIdx == sphere.objIdx ) isOccluded = sphere.Hit( ray );
+                        else if ( objIdx == cube.objIdx ) isOccluded = cube.Hit( ray );
+                        else if ( objIdx == triangle.objIdx ) isOccluded = triangle.Hit( ray );
+                        else if ( objIdx == groundQuad.objIdx ) isOccluded = groundQuad.Hit( ray );
                         else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) isOccluded = tet.Hit( ray, tetIdx );
                         else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) isOccluded = teapot.Hit( ray, teapotIdx );
 
@@ -1147,11 +1140,11 @@ namespace Tmpl8 {
             // this way we prevent calculating it multiple times.
             if ( objIdx == -1 ) return float3( 0 ); // or perhaps we should just crash
             float3 N;
-            if ( objIdx == 0 ) N = quad.GetNormal( I );
-            else if ( objIdx == 1 ) N = sphere.GetNormal( I );
-            else if ( objIdx == 2 ) N = cube.GetNormal( I );
-            else if ( objIdx == 3 ) N = triangle.GetNormal( I );
-            else if ( objIdx == 4 ) N = groundQuad.GetNormal( I );
+            if ( objIdx == quad.objIdx ) N = quad.GetNormal( I );
+            else if ( objIdx == sphere.objIdx ) N = sphere.GetNormal( I );
+            else if ( objIdx == cube.objIdx ) N = cube.GetNormal( I );
+            else if ( objIdx == triangle.objIdx ) N = triangle.GetNormal( I );
+            else if ( objIdx == groundQuad.objIdx ) N = groundQuad.GetNormal( I );
             else if( int modelTriangle = tet.hasObject( objIdx ); modelTriangle != -1 ) N = tet.GetNormal( modelTriangle, I );
             else if ( int modelTriangle = teapot.hasObject( objIdx ); modelTriangle != -1 ) N = teapot.GetNormal( modelTriangle, I );
             else {
@@ -1161,28 +1154,6 @@ namespace Tmpl8 {
             }
             if ( dot( N, wo ) > 0 ) N = -N; // hit backside / inside
             return N;
-        }
-        float3 GetAlbedo( int objIdx, float3 I ) const
-        {
-            if ( objIdx == -1 ) return float3( 0 ); // or perhaps we should just crash
-            if ( objIdx == 0 ) return quad.GetAlbedo( I );
-            if ( objIdx == 1 ) return sphere.GetAlbedo( I );
-            if ( objIdx == 2 ) return cube.GetAlbedo( I );
-            if ( objIdx == 3 ) return triangle.GetAlbedo( I );
-            if ( objIdx == 4 ) return groundQuad.GetAlbedo( I );
-            return plane[objIdx - 4].GetAlbedo( I );
-            // once we have triangle support, we should pass objIdx and the bary-
-            // centric coordinates of the hit, instead of the intersection location.
-        }
-        float GetReflectivity( int objIdx, float3 I ) const
-        {
-            if ( objIdx == 1 /* ball */ ) return 1;
-            if ( objIdx == 6 /* floor */ ) return 0.3f;
-            return 0;
-        }
-        float GetRefractivity( int objIdx, float3 I ) const
-        {
-            return objIdx == 3 ? 1.0f : 0.0f;
         }
         __declspec( align( 64 ) ) // start a new cacheline here
             float animTime = 0;
