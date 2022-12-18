@@ -66,6 +66,19 @@ namespace Tmpl8 {
                 return;
             }
         }
+        bool Hit( Ray& ray ) {
+            float3 oc = ray.O - this->pos;
+            float b = dot( oc, ray.D );
+            float c = dot( oc, oc ) - this->r2;
+            float t, d = b * b - c;
+            if ( d <= 0 ) return false;
+            d = sqrtf( d ), t = -b - d;
+            if ( t < ray.t && t > EPS ) return true;
+
+            t = d - b;
+            if ( t < ray.t && t > EPS ) return true;
+            return false;
+        }
         float3 GetNormal( const float3 I ) const
         {
             return ( I - this->pos ) * invr;
@@ -136,6 +149,10 @@ namespace Tmpl8 {
                     ray.v = -I.z;
                 }
             }
+        }
+        bool Hit( Ray& ray ) {
+            float t = -( dot( ray.O, this->N ) + this->d ) / ( dot( ray.D, this->N ) );
+            return t < ray.t&& t > EPS;
         }
         float3 GetNormal( const float3 I ) const
         {
@@ -216,6 +233,28 @@ namespace Tmpl8 {
             {
                 if ( tmax < ray.t ) ray.t = tmax, ray.objIdx = objIdx, setTextureCoords( ray );
             }
+        }
+        bool Hit( Ray& ray ) {
+            // 'rotate' the cube by transforming the ray into object space
+            // using the inverse of the cube transform.
+            float3 O = TransformPosition( ray.O, invM );
+            float3 D = TransformVector( ray.D, invM );
+            float rDx = 1 / D.x, rDy = 1 / D.y, rDz = 1 / D.z;
+            int signx = D.x < 0, signy = D.y < 0, signz = D.z < 0;
+            float tmin = ( b[signx].x - O.x ) * rDx;
+            float tmax = ( b[1 - signx].x - O.x ) * rDx;
+            float tymin = ( b[signy].y - O.y ) * rDy;
+            float tymax = ( b[1 - signy].y - O.y ) * rDy;
+            if ( tmin > tymax || tymin > tmax ) return false;
+
+            tmin = max( tmin, tymin ), tmax = min( tmax, tymax );
+            float tzmin = ( b[signz].z - O.z ) * rDz;
+            float tzmax = ( b[1 - signz].z - O.z ) * rDz;
+            if ( tmin > tzmax || tzmin > tmax ) return false;
+
+            tmin = max( tmin, tzmin );
+            tmax = min( tmax, tzmax );
+            return (tmin > EPS && tmin < ray.t) || ( tmax > EPS && tmax < ray.t );
         }
         void setTextureCoords( Ray& ray ) const {
             // transform intersection point to object space
@@ -378,6 +417,17 @@ namespace Tmpl8 {
                     ray.t = t, ray.objIdx = objIdx;
             }
         }
+        bool Hit( Ray& ray ) {
+            const float3 O = TransformPosition( ray.O, invT );
+            const float3 D = TransformVector( ray.D, invT );
+            const float t = O.y / -D.y;
+            if ( t < ray.t && t > EPS ) {
+                float3 I = O + t * D;
+                return I.x > -size && I.x < size&& I.z > -size && I.z < size;
+            }
+
+            return false;
+        }
         float3 GetNormal( const float3 I ) const
         {
             return TransformVector( float3( 0, -1, 0 ), T );
@@ -441,26 +491,46 @@ namespace Tmpl8 {
 
             float denom = dot( cross( ray.D, AC ), AB );
             // if denom is effectively 0 there is no intersection
-            if ( abs( denom ) < CL_DBL_EPSILON ) {
-                return;
-            }
+            if ( abs( denom ) < CL_DBL_EPSILON ) return;
+            denom = 1.0f / denom;
 
             // we need u in [0, 1]
             float3 AO = ray.O - A;
-            float u = dot( cross( -ray.D, AO ), AC ) / denom;
+            float u = dot( cross( -ray.D, AO ), AC ) * denom;
             if ( u < 0 || u > 1 ) return;
 
             // same for v and (u + v)
-            float v = dot( cross( -ray.D, AB ), AO ) / denom;
+            float v = dot( cross( -ray.D, AB ), AO ) * denom;
             if ( v < 0 || u + v > 1 ) return;
 
-            float t = dot( cross( AO, AB ), AC ) / denom;
+            float t = dot( cross( AO, AB ), AC ) * denom;
             if ( t < ray.t && t > EPS ) {
                 ray.t = t;
                 ray.objIdx = objIdx;
                 ray.u = u;
                 ray.v = v;
             }
+        }
+        bool Hit( Ray& ray ) {
+            float3 AB = B - A;
+            float3 AC = C - A;
+
+            float denom = dot( cross( ray.D, AC ), AB );
+            // if denom is effectively 0 there is no intersection
+            if ( abs( denom ) < CL_DBL_EPSILON ) return false;
+            denom = 1.0f / denom;
+
+            // we need u in [0, 1]
+            float3 AO = ray.O - A;
+            float u = dot( cross( -ray.D, AO ), AC ) * denom;
+            if ( u < 0 || u > 1 ) return false;
+
+            // same for v and (u + v)
+            float v = dot( cross( -ray.D, AB ), AO ) * denom;
+            if ( v < 0 || u + v > 1 ) return false;
+
+            float t = dot( cross( AO, AB ), AC ) * denom;
+            return t < ray.t&& t > EPS;
         }
 
         float3 GetNormal( const float3 I ) const {
@@ -559,6 +629,10 @@ namespace Tmpl8 {
 
         void Intersect( Ray& ray, const int idx ) const {
             triangles[idx].Intersect( ray );
+        }
+
+        bool Hit( Ray& ray, const int idx ) {
+            return triangles[idx].Hit( ray );
         }
 
         int hasObject( const int objIdx ) const {
@@ -1025,19 +1099,20 @@ namespace Tmpl8 {
 
             BVHNode* node = &bvhNode[rootNodeIdx], * stack[64];
             uint stackPtr = 0;
+            bool isOccluded = false;
             while ( true ) {
                 if ( node->isLeaf() ) {
                     for ( uint i = 0; i < node->primitiveCount; i++ ) {
                         int objIdx = primitiveIndices[node->leftFirst + i];
-                        if ( objIdx == 0 ) quad.Intersect( ray );
-                        else if ( objIdx == 1 ) sphere.Intersect( ray );
-                        else if ( objIdx == 2 ) cube.Intersect( ray );
-                        else if ( objIdx == 3 ) triangle.Intersect( ray );
-                        else if ( objIdx == 4 ) groundQuad.Intersect( ray );
-                        else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) tet.Intersect( ray, tetIdx );
-                        else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) teapot.Intersect( ray, teapotIdx );
+                        if ( objIdx == 0 ) isOccluded = quad.Hit( ray );
+                        else if ( objIdx == 1 ) isOccluded = sphere.Hit( ray );
+                        else if ( objIdx == 2 ) isOccluded = cube.Hit( ray );
+                        else if ( objIdx == 3 ) isOccluded = triangle.Hit( ray );
+                        else if ( objIdx == 4 ) isOccluded = groundQuad.Hit( ray );
+                        else if ( int tetIdx = tet.hasObject( objIdx ); tetIdx != -1 ) isOccluded = tet.Hit( ray, tetIdx );
+                        else if ( int teapotIdx = teapot.hasObject( objIdx ); teapotIdx != -1 ) isOccluded = teapot.Hit( ray, teapotIdx );
 
-                        if ( ray.t < rayLength && ray.t > EPS ) return true;
+                        if ( isOccluded ) return true;
                     }
 
                     if ( stackPtr == 0 ) break;
