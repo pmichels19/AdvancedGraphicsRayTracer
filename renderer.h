@@ -6,7 +6,9 @@ namespace Tmpl8 {
     public:
         // game flow methods
         void Init();
-        float3 Trace( Ray& ray, int depth = 10, bool lastSpecular = true );
+        float3 Trace( Ray& ray, bool lastSpecular = true, int depth = 10 );
+
+        vector<float3> TracePacket( RayPacket& rays );
 
         float3 WhittedTrace( Ray& ray, int depth = 20 );
 
@@ -64,7 +66,8 @@ namespace Tmpl8 {
 
                 if ( !scene.IsOccluded( toLight ) ) {
                     float solidAngle = ( dotNlL * area ) / ( distance * distance );
-                    Ld = scene.GetLightColor( light, toLight ) * solidAngle * BRDF * dotNL; // TODO: currently we have only one hardcoded light...that might change
+                    float lightPDF = 1.0f / solidAngle;
+                    Ld = scene.GetLightColor( light, toLight ) * BRDF * ( dotNL / lightPDF ); // TODO: currently we have only one hardcoded light...that might change
                 }
             }
 
@@ -130,8 +133,11 @@ namespace Tmpl8 {
             if ( key == 87 ) zMove += 1; // w
             if ( key == 83 ) zMove -= 1; // s
 
+#if !PACKET_TRAVERSAL
             // switching ray tracer styles
             if ( key == 75 ) useWhitted = !useWhitted, tracerSwap = true, printf( "Switching to %s.\n", useWhitted ? "Whitted style ray tracer" : "Kajiya path tracer" ); // k
+#endif
+
         }
 
         // data members

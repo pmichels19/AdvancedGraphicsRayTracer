@@ -1,6 +1,6 @@
 #pragma once
 
-#define BIN_COUNT 8
+#define BIN_COUNT 16
 
 struct BVHNode {
     float3 aabbMin;
