@@ -57,7 +57,6 @@ namespace Tmpl8 {
             lamp = make_shared<Light>( Light( float3( 24.0f, 24.0f, 22.0f ), float3( 0.0f, -1.0f, 0.0f ) ) );
 
             earth = make_shared<TextureMaterial>( TextureMaterial( "assets/earth.png" ) );
-
             // we store all primitives in one continuous buffer
             primitives.push_back( Primitive::createQuad( primitiveCount, 2 ) );
             primitives.push_back( Primitive::createSphere( primitiveCount, float3( 0 ), 0.5f ) );
@@ -65,20 +64,18 @@ namespace Tmpl8 {
             primitives.push_back( Primitive::createTriangle( primitiveCount, float3( 0, 0, 3 ), float3( 0.5, -1, 3 ), float3( -0.5, -1, 3 ) ) );
             primitives.push_back( Primitive::createQuad( primitiveCount, 50, mat4::Translate( float3( 0.0f, -1.0f, 0.0f ) ) ) );
 
-            mat4 tetTransform = 
-                mat4::Translate( float3( 0, 0.5f, 0.5f ) ) * 
-                mat4::RotateX( 0.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI ) * 
-                mat4::Scale( 0.01f );
-            //readObjFile( "assets/tetrahedron.obj", primitiveCount, tetTransform );
-            mat4 teapotTransform = mat4::Translate( float3( 0, 0.5f, -4.0f ) );// * mat4::Scale( 0.01f );
-            //readObjFile( "assets/teapot.obj", primitiveCount, teapotTransform );
+            mat4 tetTransform = mat4::Translate( float3( 0, 0.5f, 0.5f ) ) * mat4::RotateX( 0.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI ) * mat4::Scale( 0.01f );
+            readObjFile( "assets/tetrahedron.obj", primitiveCount, tetTransform );
+            mat4 teapotTransform = mat4::Translate( float3( 0, 0.5f, -4.0f ) );
+            readObjFile( "assets/teapot.obj", primitiveCount, teapotTransform );
 
             SetTime( 0 );
 
             // build BVH after objects are moved with setTime
             printf("Building BVH...\n");
+            primitiveIndices = (uint*) MALLOC64( primitiveCount * sizeof( uint ) );
             for ( uint i = 0; i < primitiveCount; i++ ) {
-                primitiveIndices.push_back( i );
+                primitiveIndices[i] = i;
             }
 
             bvhNode = (BVHNode*) MALLOC64( ( 2 * primitiveCount + 1 ) * sizeof( BVHNode ) );
@@ -97,8 +94,9 @@ namespace Tmpl8 {
             // hierarchy: virtuals reduce performance somewhat.
         }
 
-        void readObjFile( const string fileName, uint& objIdx, mat4 transform = mat4::Identity() ) const {
+        void readObjFile( const string fileName, uint& objIdx, mat4 transform = mat4::Identity() ) {
             ifstream in( fileName, ios::in );
+            vector<Primitive> result;
             if ( !in ) {
                 printf( "Couldn't open OBJ file.\n" );
                 return;
@@ -123,8 +121,7 @@ namespace Tmpl8 {
 
                     sscanf( chh, "f %i/%*i/%*i %i/%*i/%*i %i/%*i/%*i", &a, &b, &c );
 
-                    Primitive face = Primitive::createTriangle( objIdx, vertices[a - 1], vertices[b - 1], vertices[c - 1] );
-                    //primitives.push_back( face );
+                    primitives.push_back( Primitive::createTriangle( objIdx, vertices[a - 1], vertices[b - 1], vertices[c - 1] ) );
                 }
             }
 
@@ -279,7 +276,7 @@ namespace Tmpl8 {
                 case 4:    // ground quad
                     return checkerboard;
                 default:
-                    return white;
+                    return mirror;
             }
         }
         void SetTime( float t )
@@ -318,8 +315,8 @@ namespace Tmpl8 {
             return float3( 0.0f, -1.0f, 0.0f );
         }
         void FindNearest( Ray& ray ) {
-            for ( uint idx : primitiveIndices ) {
-                primitives[idx].Intersect( ray );
+            for ( int i = 0; i < primitiveCount; i++ ) {
+                primitives[i].Intersect( ray );
             }
         }
         void IntersectBVH( Ray& ray ) {
@@ -441,7 +438,7 @@ namespace Tmpl8 {
             float animTime = 0;
 
         vector<Primitive> primitives;
-        vector<uint> primitiveIndices;
+        uint* primitiveIndices;
 
         shared_ptr<ObjectMaterial> red;
         shared_ptr<ObjectMaterial> green;

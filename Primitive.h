@@ -21,17 +21,17 @@ enum PrimitiveType {
 class Primitive {
 public:
     float3 centroid;
-    float3* data;
+    vector<float3> data;
 
     mat4 Transform;
     mat4 InvertedTransform;
 
     PrimitiveType type;
 
-    int objIdx;
+    uint objIdx;
 
     Primitive() = default;
-    Primitive( float3* data, PrimitiveType type, uint& objIdx, mat4 Transform = mat4::Identity() ): data( data ), type( type ), objIdx( objIdx++ ), Transform( Transform ) {
+    Primitive( vector<float3> data, PrimitiveType type, uint& idx, mat4 Transform = mat4::Identity() ): data( data ), type( type ), objIdx( idx++ ), Transform( Transform ) {
         // get the inverted transformation matrix
         InvertedTransform = Transform.FastInvertedTransformNoScale();
         // set the centroid
@@ -59,16 +59,15 @@ public:
     **/
     void Intersect( Ray& ray ) const {
         if ( type == SPHERE ) {
-            float3 pos = TransformPosition( float3( 0 ), Transform );
+            float3 pos = TransformPosition( float3( 0.0f ), Transform );
             float3 oc = ray.O - pos;
             float b = dot( oc, ray.D );
-            float c = dot( oc, oc ) - data[1].y;
-            float d = b * b - c;
+            float c = dot( oc, oc ) - data[0].y;
+            float t, d = b * b - c;
 
             if ( d <= 0 ) return;
 
-            d = sqrtf( d );
-            float t = -b - d;
+            d = sqrtf( d ), t = -b - d;
             if ( t < ray.t && t > EPS ) {
                 ray.t = t;
                 ray.objIdx = objIdx;
@@ -85,6 +84,7 @@ public:
                 float3 cToI = normalize( ray.IntersectionPoint() - pos );
                 ray.u = 0.5f - atan2f( cToI.z, cToI.x ) * INV2PI;
                 ray.v = 0.5f - asinf( cToI.y ) * INVPI;
+                return;
             }
         } else if ( type == PLANE ) {
             float t = -( dot( ray.O, data[0] ) + data[1].x ) / ( dot( ray.D, data[0] ) );
@@ -108,6 +108,7 @@ public:
             // using the inverse of the cube transform.
             float3 O = TransformPosition( ray.O, InvertedTransform );
             float3 D = TransformVector( ray.D, InvertedTransform );
+
             float rDx = 1 / D.x;
             float rDy = 1 / D.y;
             float rDz = 1 / D.z;
@@ -120,22 +121,28 @@ public:
             float tmax = ( data[1 - signx].x - O.x ) * rDx;
             float tymin = ( data[signy].y - O.y ) * rDy;
             float tymax = ( data[1 - signy].y - O.y ) * rDy;
-
             if ( tmin > tymax || tymin > tmax ) return;
 
             tmin = max( tmin, tymin );
             tmax = min( tmax, tymax );
-
             float tzmin = ( data[signz].z - O.z ) * rDz;
             float tzmax = ( data[1 - signz].z - O.z ) * rDz;
-
             if ( tmin > tzmax || tzmin > tmax ) return;
 
-            tmin = max( tmin, tzmin ), tmax = min( tmax, tzmax );
+            tmin = max( tmin, tzmin );
+            tmax = min( tmax, tzmax );
             if ( tmin > EPS ) {
-                if ( tmin < ray.t ) ray.t = tmin, ray.objIdx = objIdx, setTextureCoordsCube( ray );
+                if ( tmax < ray.t ) {
+                    ray.t = tmin;
+                    ray.objIdx = objIdx;
+                    setTextureCoordsCube( ray );
+                }
             } else if ( tmax > EPS ) {
-                if ( tmax < ray.t ) ray.t = tmax, ray.objIdx = objIdx, setTextureCoordsCube( ray );
+                if ( tmax < ray.t ) {
+                    ray.t = tmax;
+                    ray.objIdx = objIdx;
+                    setTextureCoordsCube( ray );
+                }
             }
         } else if ( type == QUAD ) {
             const float3 O = TransformPosition( ray.O, InvertedTransform );
@@ -159,9 +166,7 @@ public:
 
             float denom = dot( cross( ray.D, AC ), AB );
             // if denom is effectively 0 there is no intersection
-            if ( abs( denom ) < CL_DBL_EPSILON ) {
-                return;
-            }
+            if ( abs( denom ) < CL_DBL_EPSILON ) return;
 
             // we need u in [0, 1]
             float3 AO = ray.O - A;
@@ -212,7 +217,7 @@ public:
         } else if ( type == QUAD ) {
             return TransformVector( float3( 0, -1, 0 ), Transform );
         } else if ( type == TRIANGLE ) {
-            float3 baseN = normalize( cross( data[2] - data[0], data[1] - data[0]));
+            float3 baseN = normalize( cross( data[2] - data[0], data[1] - data[0] ) );
             return TransformVector( baseN, Transform );
         } else {
             printf( "Impossible primitive type given!\tnormal\n" ); // maybe we should crash here...
@@ -379,9 +384,9 @@ public:
     // -----------------------------------------------------------
     static Primitive createSphere( uint& objIdx, float3 position, float r ) {
         // pack needed data into the data array of float3's
-        float3 sphereData[1]{};
+        vector<float3> sphereData;
         // save the r because we have the space, might as well.
-        sphereData[0] = float3( r, r * r, 1.0f / r );
+        sphereData.push_back( float3(r, r * r, 1.0f / r) );
         // switch to using the matrix as position thing instead of p
         mat4 T = mat4::Translate( position );
         return Primitive( sphereData, SPHERE, objIdx, T );
@@ -393,9 +398,9 @@ public:
     // 1: x -> distance
     // -----------------------------------------------------------
     static Primitive createPlane( uint& objIdx, float3 normal, float distance ) {
-        float3 planeData[2]{};
-        planeData[0] = normal;
-        planeData[1] = float3( distance, 0.0f, 0.0f );
+        vector<float3> planeData;
+        planeData.push_back( float3( normal ) );
+        planeData.push_back( float3( distance, 0.0f, 0.0f ) );
         return Primitive( planeData, PLANE, objIdx );
     }
 
@@ -411,10 +416,9 @@ public:
             transformCube = T * mat4::Translate( pos );
         }
 
-        float3 cubeData[2]{};
-        cubeData[0] = -0.5f * size;
-        cubeData[1] = 0.5f * size;
-
+        vector<float3> cubeData;
+        cubeData.push_back( float3( -0.5f * size ) );
+        cubeData.push_back( float3(  0.5f * size ) );
         return Primitive( cubeData, CUBE, objIdx, transformCube );
     }
 
@@ -424,13 +428,16 @@ public:
     // 0: x -> 0.5 * size
     // -----------------------------------------------------------
     static Primitive createQuad( uint& objIdx, float size, mat4 T = mat4::Identity() ) {
-        float3 quadData[1]{};
-        quadData[0] = float3( 0.5f * size, 0.0f, 0.0f );
+        vector<float3> quadData;
+        quadData.push_back( float3( 0.5f * size, 0.0f, 0.0f ) );
         return Primitive( quadData, QUAD, objIdx, T );
     }
 
     static Primitive createTriangle( uint& objIdx, float3 v0, float3 v1, float3 v2 ) {
-        float3 triangleData[3]{ v0, v1, v2 };
+        vector<float3> triangleData;
+        triangleData.push_back( float3( v0 ) );
+        triangleData.push_back( float3( v1 ) );
+        triangleData.push_back( float3( v2 ) );
         return Primitive( triangleData, TRIANGLE, objIdx );
     }
 
