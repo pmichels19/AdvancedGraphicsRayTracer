@@ -1,6 +1,6 @@
 # Blender v2.72 (sub 0) OBJ File: 'Tetrahedron.blend'
 # www.blender.org
-mtllib Tetrahedron.mtl
+# mtllib Tetrahedron.mtl
 o Cone.001
 v 0.000000 -100.462494 -142.500000
 v 123.408615 -100.462494 71.250008

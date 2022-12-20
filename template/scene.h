@@ -55,21 +55,48 @@ namespace Tmpl8 {
             lamp = new Light( float3( 24.0f, 24.0f, 22.0f ), float3( 0.0f, -1.0f, 0.0f )  );
 
             earth = new TextureMaterial( "assets/earth.png" );
-            // we store all primitives in one continuous buffer
+
+            // -----------------------------------------------------------
+            // Basic primitives for a simple scene
+            // -----------------------------------------------------------
             primitives.push_back( Primitive::createQuad( primitiveCount, 2, lamp ) );
             primitives.push_back( Primitive::createSphere( primitiveCount, float3( 0 ), 0.5f, earth ) );
             primitives.push_back( Primitive::createCube( primitiveCount, float3( 0.0f ), float3( 1.15f ), diamond ) );
             primitives.push_back( Primitive::createTriangle( primitiveCount, float3( 0, 0, 3 ), float3( 0.5, -1, 3 ), float3( -0.5, -1, 3 ), red ) );
             primitives.push_back( Primitive::createQuad( primitiveCount, 50, checkerboard, mat4::Translate( float3( 0.0f, -1.0f, 0.0f ) ) ) );
 
+            // -----------------------------------------------------------
+            // mirror tetrahedron
+            // -----------------------------------------------------------
             mat4 tetTransform = 
                 mat4::Translate( float3( 0, 0.5f, 0.5f ) ) * 
                 mat4::RotateX( 1.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI ) * 
                 mat4::Scale( 0.0075f );
-            readObjFile( "assets/tetrahedron.obj", primitiveCount, mirror, tetTransform );
-            mat4 teapotTransform = mat4::Translate( float3( 0, 0.5f, 4.0f ) );
-            readObjFile( "assets/teapot.obj", primitiveCount, green, teapotTransform );
+            LoadModel( "assets/tetrahedron.obj", primitiveCount, mirror, tetTransform );
 
+            // -----------------------------------------------------------
+            // rainbow of teapots
+            // -----------------------------------------------------------
+            mat4 teapotTransform = mat4::Translate( float3( -3.0f, 0.5f, 4.0f ) );
+            LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 0.58f, 0.00f, 0.83f ) ), teapotTransform );
+            teapotTransform = mat4::Translate( float3( -2.0f, 0.5f, 4.0f ) );
+            LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 0.29f, 0.00f, 0.51f ) ), teapotTransform );
+            teapotTransform = mat4::Translate( float3( -1.0f, 0.5f, 4.0f ) );
+            LoadModel( "assets/teapot.obj", primitiveCount, blue, teapotTransform );
+            teapotTransform = mat4::Translate( float3(  0.0f, 0.5f, 4.0f ) );
+            LoadModel( "assets/teapot.obj", primitiveCount, green, teapotTransform );
+            teapotTransform = mat4::Translate( float3( 1.0f, 0.5f, 4.0f ) );
+            LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 1.0f, 0.0f ) ), teapotTransform);
+            teapotTransform = mat4::Translate( float3( 2.0f, 0.5f, 4.0f ) );
+            LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 0.5f, 0.0f ) ), teapotTransform );
+            teapotTransform = mat4::Translate( float3( 3.0f, 0.5f, 4.0f ) );
+            LoadModel( "assets/teapot.obj", primitiveCount, red, teapotTransform );
+
+            // -----------------------------------------------------------
+            // lil shiba doggy :3
+            // -----------------------------------------------------------
+            mat4 ShibaTransform = mat4::Translate( float3( 0.0f, -1.0f, 2.0f ) ) * mat4::RotateY( PI ) * mat4::Scale( 5.0f );
+            LoadModel( "assets/Shiba.obj", primitiveCount, new Dielectric( float3( 3.5f, 3.5f, 0.5f ), 1.52f ), ShibaTransform );
             SetTime( 0 );
 
             // build BVH after objects are moved with setTime
@@ -92,38 +119,51 @@ namespace Tmpl8 {
             // hierarchy: virtuals reduce performance somewhat.
         }
 
-        void readObjFile( const string fileName, uint& objIdx, ObjectMaterial* material, mat4 transform = mat4::Identity() ) {
-            ifstream in( fileName, ios::in );
-            vector<Primitive> result;
-            if ( !in ) {
-                printf( "Couldn't open OBJ file.\n" );
+        void LoadModel( const string fileName, uint& objIdx, ObjectMaterial* material, mat4 transform = mat4::Identity() ) {
+            tinyobj::attrib_t attrib;
+            vector<tinyobj::shape_t> shapes;
+            vector<tinyobj::material_t> materials;
+            string warn;
+            string err;
+            bool ret = tinyobj::LoadObj( &attrib, &shapes, &materials, &warn, &err, fileName.c_str() );
+
+            // we get some warnings for mtls not being found, we don't use those anyway atm so ignore those
+            //if ( !warn.empty() ) printf( "Model loader warning: %s\n", warn.c_str() );
+            if ( !err.empty() ) printf( "Model loader error: %s\n", err.c_str() );
+            if ( !ret ) {
+                printf( "Failed to load/parse %s.\n", fileName.c_str() );
                 return;
             }
 
-            string line;
-            vector<float3> vertices;
-            while ( getline( in, line ) ) {
-                if ( line.substr( 0, 2 ) == "v " ) {
-                    //check v for vertices
-                    istringstream v( line.substr( 2 ) );
-                    float3 vert;
-                    float x, y, z;
-                    v >> x; v >> y; v >> z;
-                    vert = float3( x, y, z );
-                    // vertices.push_back( rotate.TransformPoint( vert * scale + offset ) );
-                    vertices.push_back( TransformPosition( vert, transform ) );
-                } else if ( line.substr( 0, 2 ) == "f " ) {
-                    //check f for faces
-                    int a, b, c;
-                    const char* chh = line.c_str();
+            // Loop over shapes
+            for ( size_t s = 0; s < shapes.size(); s++ ) {
+                // Loop over faces(polygon)
+                size_t index_offset = 0;
+                for ( size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++ ) {
+                    size_t fv = size_t( shapes[s].mesh.num_face_vertices[f] );
 
-                    sscanf( chh, "f %i/%*i/%*i %i/%*i/%*i %i/%*i/%*i", &a, &b, &c );
+                    vector<float3> triV;
+                    // Loop over vertices in the face.
+                    for ( size_t v = 0; v < fv; v++ ) {
+                        // access to vertex
+                        tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
 
-                    primitives.push_back( Primitive::createTriangle( objIdx, vertices[a - 1], vertices[b - 1], vertices[c - 1], material ) );
+                        tinyobj::real_t vx = attrib.vertices[3 * size_t( idx.vertex_index ) + 0];
+                        tinyobj::real_t vy = attrib.vertices[3 * size_t( idx.vertex_index ) + 1];
+                        tinyobj::real_t vz = attrib.vertices[3 * size_t( idx.vertex_index ) + 2];
+
+                        triV.push_back( TransformPosition( float3( vx, vy, vz ), transform));
+                        if ( triV.size() == 3 ) {
+                            primitives.push_back( Primitive::createTriangle( objIdx, triV[0], triV[1], triV[2], material ) );
+                            triV.erase( triV.begin() );
+                        }
+                    }
+
+                    index_offset += fv;
                 }
             }
 
-            vertices.clear();
+            printf( "Finished reading %s!\n", fileName.c_str() );
         }
 
         void BuildBVH() {
@@ -394,7 +434,7 @@ namespace Tmpl8 {
                     }
 
                     if ( node->isLeaf() ) {
-                        for ( int i = 0; i < PACKET_SIZE; i++ ) {
+                        for ( int i = rays.firstActive; i < PACKET_SIZE; i++ ) {
                             Ray ray = rays.GetRay( i );
 
                             for ( uint idx = 0; idx < node->primitiveCount; idx++ ) {

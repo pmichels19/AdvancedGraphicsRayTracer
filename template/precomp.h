@@ -1652,6 +1652,9 @@ public:
 #define EPS 0.0001f
 #define SKYDOME_CORRECTION 0.00392156862745f // 1 / 255
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+
 #include "Ray.h"
 
 // Material items

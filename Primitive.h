@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+* Primitive flags
+* 
+* easy ids for the type of object that is being worked with
+**/
 enum PrimitiveType {
     SPHERE = 0,
     PLANE = 1,
@@ -11,12 +16,8 @@ enum PrimitiveType {
 /**
 * Primitive wrapper class
 *
-* All primitives can be expressed in this class in the given formats:
-* SPHERE:
-* PLANE:
-* CUBE:
-* QUAD:
-* TRIANGLE:
+* All primitives can be expressed in this class.
+* This thing hurts my eyes.
 **/
 class Primitive {
 public:

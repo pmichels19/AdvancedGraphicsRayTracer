@@ -145,6 +145,7 @@
     <ClInclude Include="template\common.h" />
     <ClInclude Include="template\precomp.h" />
     <ClInclude Include="template\scene.h" />
+    <ClInclude Include="template\tiny_obj_loader.h" />
     <ClInclude Include="TextureMaterial.h" />
   </ItemGroup>
   <ItemGroup>

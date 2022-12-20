@@ -26,6 +26,7 @@ float3 Renderer::Trace( Ray& ray, bool lastSpecular, int depth ) {
     // fetch intersection point, normal and material
     float3 I = ray.O + ray.t * ray.D;
     float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
+    //return ( N + 1 ) * 0.5f;
     ObjectMaterial* mat = scene.GetMaterial( ray.objIdx );
 
     // from material we can get a bounce ray, an albedo, whether the bounce is from a specular surface and the type of material

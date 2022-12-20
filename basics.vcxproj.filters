@@ -48,6 +48,9 @@
     </ClInclude>
     <ClInclude Include="BVHNode.h" />
     <ClInclude Include="Primitive.h" />
+    <ClInclude Include="template\tiny_obj_loader.h">
+      <Filter>template</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

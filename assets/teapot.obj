@@ -4,7 +4,7 @@
 # Right Hemisphere, LTD
 # http://www.righthemisphere.com/
 # 
-mtllib teapot.mtl
+# mtllib teapot.mtl
 # object Teapot01
 g Teapot01
 v 4.90876e-009 0.256685 -0.368984

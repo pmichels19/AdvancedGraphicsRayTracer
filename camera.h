@@ -26,7 +26,7 @@ namespace Tmpl8 {
         }
     public:
         Camera() {
-            aperture = 0.05;
+            aperture = 0.000005;
             lensRadius = aperture / 2.0f;
             focusDistance = 1;
 
