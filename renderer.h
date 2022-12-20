@@ -25,7 +25,7 @@ namespace Tmpl8 {
             float3 result = float3( 0 );
             int samples = 0;
             for ( samples; samples < 4; samples++ ) {
-                float3 intersectionToLight = scene.GetLightPos() - I;
+                float3 intersectionToLight = scene.GetLightPos( 0 ) - I;
                 float distance = length( intersectionToLight );
                 intersectionToLight /= distance;
                 float dotDN = dot( intersectionToLight, N );

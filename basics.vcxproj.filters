@@ -47,6 +47,7 @@
       <Filter>Materials</Filter>
     </ClInclude>
     <ClInclude Include="BVHNode.h" />
+    <ClInclude Include="Primitive.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="template">

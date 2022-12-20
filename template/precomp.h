@@ -1668,6 +1668,8 @@ public:
 
 #include "BVHNode.h"
 
+#include "Primitive.h"
+
 #include "scene.h"
 #include "camera.h"
 #include "renderer.h"
