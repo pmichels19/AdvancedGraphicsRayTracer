@@ -282,8 +282,7 @@ namespace Tmpl8 {
                     return mirror;
             }
         }
-        void SetTime( float t )
-        {
+        void SetTime( float t ) {
             // default time for the scene is simply 0. Updating/ the time per frame 
             // enables animation. Updating it per ray can be used for motion blur.
             animTime = t;
@@ -316,11 +315,6 @@ namespace Tmpl8 {
         }
         float3 GetLightDir() const {
             return float3( 0.0f, -1.0f, 0.0f );
-        }
-        void FindNearest( Ray& ray ) {
-            for ( int i = 0; i < primitiveCount; i++ ) {
-                primitives[i].Intersect( ray );
-            }
         }
 
         void IntersectBVH( Ray& ray ) {
@@ -502,7 +496,7 @@ namespace Tmpl8 {
                     for ( uint i = 0; i < node->primitiveCount; i++ ) {
                         int objIdx = primitiveIndices[node->leftFirst + i];
                         primitives[objIdx].Intersect( ray );
-                        if ( ray.t < rayLength && ray.t > EPS ) return true; // TODO: make HIT function
+                        if ( primitives[objIdx].Hit( ray ) ) return true;
                     }
 
                     if ( stackPtr == 0 ) break;

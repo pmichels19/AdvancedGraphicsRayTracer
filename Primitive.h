@@ -55,6 +55,90 @@ public:
     }
 
     /**
+    * Test for a hit with a ray against this primitive
+    **/
+    bool Hit( Ray& ray ) const {
+        if ( type == SPHERE ) {
+            float3 pos = TransformPosition( float3( 0.0f ), Transform );
+            float3 oc = ray.O - pos;
+            float b = dot( oc, ray.D );
+            float c = dot( oc, oc ) - data[0].y;
+            float t, d = b * b - c;
+
+            if ( d <= 0 ) return false;
+
+            d = sqrtf( d ), t = -b - d;
+            if ( t < ray.t && t > EPS ) return true;
+
+            t = d - b;
+            return t < ray.t && t > EPS;
+        } else if ( type == PLANE ) {
+            float t = -( dot( ray.O, data[0] ) + data[1].x ) / ( dot( ray.D, data[0] ) );
+            return t < ray.t && t > EPS;
+        } else if ( type == CUBE ) {
+            // 'rotate' the cube by transforming the ray into object space
+            // using the inverse of the cube transform.
+            float3 O = TransformPosition( ray.O, InvertedTransform );
+            float3 D = TransformVector( ray.D, InvertedTransform );
+
+            float rDx = 1 / D.x;
+            float rDy = 1 / D.y;
+            float rDz = 1 / D.z;
+
+            int signx = D.x < 0;
+            int signy = D.y < 0;
+            int signz = D.z < 0;
+
+            float tmin = ( data[signx].x - O.x ) * rDx;
+            float tmax = ( data[1 - signx].x - O.x ) * rDx;
+            float tymin = ( data[signy].y - O.y ) * rDy;
+            float tymax = ( data[1 - signy].y - O.y ) * rDy;
+            if ( tmin > tymax || tymin > tmax ) return false;
+
+            tmin = max( tmin, tymin );
+            tmax = min( tmax, tymax );
+            float tzmin = ( data[signz].z - O.z ) * rDz;
+            float tzmax = ( data[1 - signz].z - O.z ) * rDz;
+            if ( tmin > tzmax || tzmin > tmax ) return false;
+
+            tmin = max( tmin, tzmin );
+            tmax = min( tmax, tzmax );
+            return ( tmin > EPS || tmax > EPS ) && tmax < ray.t;
+        } else if ( type == QUAD ) {
+            const float3 O = TransformPosition( ray.O, InvertedTransform );
+            const float3 D = TransformVector( ray.D, InvertedTransform );
+            const float t = O.y / -D.y;
+            const float size = data[0].x;
+            return t < ray.t && t > EPS;
+        } else if ( type == TRIANGLE ) {
+            float3 A = TransformPosition( data[0], Transform );
+            float3 B = TransformPosition( data[1], Transform );
+            float3 C = TransformPosition( data[2], Transform );
+
+            float3 AB = B - A;
+            float3 AC = C - A;
+
+            float denom = dot( cross( ray.D, AC ), AB );
+            // if denom is effectively 0 there is no intersection
+            if ( abs( denom ) < CL_DBL_EPSILON ) return false;
+
+            // we need u in [0, 1]
+            float3 AO = ray.O - A;
+            float u = dot( cross( -ray.D, AO ), AC ) / denom;
+            if ( u < 0 || u > 1 ) return false;
+
+            // same for v and (u + v)
+            float v = dot( cross( -ray.D, AB ), AO ) / denom;
+            if ( v < 0 || u + v > 1 ) return false;
+
+            float t = dot( cross( AO, AB ), AC ) / denom;
+            return t < ray.t && t > EPS;
+        } else {
+            printf( "Impossible primitive type given!\tintersect\n" ); // maybe we should crash here...
+        }
+    }
+
+    /**
     * Intersect this primitive with a ray
     **/
     void Intersect( Ray& ray ) const {
