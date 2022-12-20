@@ -1,6 +1,6 @@
 #pragma once
 
-#define PACKET_TRAVERSAL true
+#define PACKET_TRAVERSAL false
 #define PACKET_SIZE 64
 #define SQRT_PACKET_SIZE 8
 

@@ -40,52 +40,48 @@ namespace Tmpl8 {
         Scene()
         {
             // make the Materials
-            red = make_shared<Diffuse>( Diffuse( float3( 0.95f, 0.05f, 0.05f ) ) );
-            green = make_shared<Diffuse>( Diffuse( float3( 0.05f, 0.95f, 0.05f ) ) );
-            blue = make_shared<Diffuse>( Diffuse( float3( 0.05f, 0.05f, 0.95f ) ) );
-            white = make_shared<Diffuse>( Diffuse( float3( 0.95f, 0.95f, 0.95f ) ) );
+            red = new Diffuse( float3( 0.95f, 0.05f, 0.05f ) );
+            green = new Diffuse( float3( 0.05f, 0.95f, 0.05f ) );
+            blue = new Diffuse( float3( 0.05f, 0.05f, 0.95f ) );
+            white = new Diffuse( float3( 0.95f, 0.95f, 0.95f ) );
 
-            mirror = make_shared<Mirror>( Mirror( float3( 0.9f, 0.9f, 0.9f ) ) );
+            mirror = new Mirror( float3( 0.9f, 0.9f, 0.9f ) );
 
-            mix = make_shared<DSMix>( DSMix( float3( 0.9f, 0.2f, 0.1f ), 0.5f ) );
+            checkerboard = new Checkerboard( float3( 0.1f, 0.1f, 0.1f ), float3( 0.9f, 0.9f, 0.9f ), 0.85f );
 
-            checkerboard = make_shared<Checkerboard>( Checkerboard( float3( 0.1f, 0.1f, 0.1f ), float3( 0.9f, 0.9f, 0.9f ), 0.95f ) );
+            glass = new Dielectric( float3( 0.5f, 0.5f, 0.5f ), 1.52f );
+            diamond = new Dielectric( float3( 0.5f, 2.5f, 0.5f ), 2.42f );
 
-            glass = make_shared<Dielectric>( Dielectric( float3( 0.5f, 0.5f, 0.5f ), 1.52f ) );
-            diamond = make_shared<Dielectric>( Dielectric( float3( 0.5f, 2.5f, 0.5f ), 2.42f ) );
+            lamp = new Light( float3( 24.0f, 24.0f, 22.0f ), float3( 0.0f, -1.0f, 0.0f )  );
 
-            lamp = make_shared<Light>( Light( float3( 24.0f, 24.0f, 22.0f ), float3( 0.0f, -1.0f, 0.0f ) ) );
-
-            earth = make_shared<TextureMaterial>( TextureMaterial( "assets/earth.png" ) );
+            earth = new TextureMaterial( "assets/earth.png" );
             // we store all primitives in one continuous buffer
-            primitives.push_back( Primitive::createQuad( primitiveCount, 2 ) );
-            primitives.push_back( Primitive::createSphere( primitiveCount, float3( 0 ), 0.5f ) );
-            primitives.push_back( Primitive::createCube( primitiveCount, float3( 0.0f ), float3( 1.15f ) ) );
-            primitives.push_back( Primitive::createTriangle( primitiveCount, float3( 0, 0, 3 ), float3( 0.5, -1, 3 ), float3( -0.5, -1, 3 ) ) );
-            primitives.push_back( Primitive::createQuad( primitiveCount, 50, mat4::Translate( float3( 0.0f, -1.0f, 0.0f ) ) ) );
+            primitives.push_back( Primitive::createQuad( primitiveCount, 2, lamp ) );
+            primitives.push_back( Primitive::createSphere( primitiveCount, float3( 0 ), 0.5f, earth ) );
+            primitives.push_back( Primitive::createCube( primitiveCount, float3( 0.0f ), float3( 1.15f ), diamond ) );
+            primitives.push_back( Primitive::createTriangle( primitiveCount, float3( 0, 0, 3 ), float3( 0.5, -1, 3 ), float3( -0.5, -1, 3 ), red ) );
+            primitives.push_back( Primitive::createQuad( primitiveCount, 50, checkerboard, mat4::Translate( float3( 0.0f, -1.0f, 0.0f ) ) ) );
 
             mat4 tetTransform = 
-                mat4::Translate( float3( 0, 1.5f, 0.5f ) ) * 
+                mat4::Translate( float3( 0, 0.5f, 0.5f ) ) * 
                 mat4::RotateX( 1.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI ) * 
-                mat4::Scale( 0.01f );
-            readObjFile( "assets/tetrahedron.obj", primitiveCount, tetTransform );
-            mat4 teapotTransform = mat4::Translate( float3( 0, 0.5f, -4.0f ) );
-            readObjFile( "assets/teapot.obj", primitiveCount, teapotTransform );
+                mat4::Scale( 0.0075f );
+            readObjFile( "assets/tetrahedron.obj", primitiveCount, mirror, tetTransform );
+            mat4 teapotTransform = mat4::Translate( float3( 0, 0.5f, 4.0f ) );
+            readObjFile( "assets/teapot.obj", primitiveCount, green, teapotTransform );
 
             SetTime( 0 );
 
             // build BVH after objects are moved with setTime
             printf("Building BVH...\n");
             primitiveIndices = (uint*) MALLOC64( primitiveCount * sizeof( uint ) );
-            for ( uint i = 0; i < primitiveCount; i++ ) {
-                primitiveIndices[i] = i;
-            }
+            for ( uint i = 0; i < primitiveCount; i++ ) primitiveIndices[i] = i;
 
             bvhNode = (BVHNode*) MALLOC64( ( 2 * primitiveCount + 1 ) * sizeof( BVHNode ) );
             BuildBVH();
             printf( "Finished BVH!\n" );
 
-            // planes are annoying
+            // this is outdated now
             // plane[0] = Plane( primitiveCount + 1, float3( 1, 0, 0 ), 3 );			// 10000: left wall
             // plane[1] = Plane( primitiveCount + 2, float3( -1, 0, 0 ), 2.99f );		// 10001: right wall
             // plane[2] = Plane( primitiveCount + 3, float3( 0, 1, 0 ), 1 );			// 10002: floor
@@ -96,7 +92,7 @@ namespace Tmpl8 {
             // hierarchy: virtuals reduce performance somewhat.
         }
 
-        void readObjFile( const string fileName, uint& objIdx, mat4 transform = mat4::Identity() ) {
+        void readObjFile( const string fileName, uint& objIdx, ObjectMaterial* material, mat4 transform = mat4::Identity() ) {
             ifstream in( fileName, ios::in );
             vector<Primitive> result;
             if ( !in ) {
@@ -123,7 +119,7 @@ namespace Tmpl8 {
 
                     sscanf( chh, "f %i/%*i/%*i %i/%*i/%*i %i/%*i/%*i", &a, &b, &c );
 
-                    primitives.push_back( Primitive::createTriangle( objIdx, vertices[a - 1], vertices[b - 1], vertices[c - 1] ) );
+                    primitives.push_back( Primitive::createTriangle( objIdx, vertices[a - 1], vertices[b - 1], vertices[c - 1], material ) );
                 }
             }
 
@@ -266,22 +262,10 @@ namespace Tmpl8 {
             }
         }
 
-        shared_ptr<ObjectMaterial> GetMaterial( int objIdx ) {
-            switch ( objIdx ) {
-                case 0:     // light panel
-                    return lamp;
-                case 1:     // bouncing ball
-                    return earth;
-                case 2:     // cube
-                    return diamond;
-                case 3:    // triangle
-                    return mix;
-                case 4:    // ground quad
-                    return checkerboard;
-                default:
-                    return mirror;
-            }
+        ObjectMaterial* GetMaterial( int objIdx ) {
+            return primitives[objIdx].material;
         }
+
         void SetTime( float t ) {
             // default time for the scene is simply 0. Updating/ the time per frame 
             // enables animation. Updating it per ray can be used for motion blur.
@@ -486,8 +470,6 @@ namespace Tmpl8 {
         }
 
         bool IsOccluded( Ray& ray ) {
-            float rayLength = ray.t;
-
             BVHNode* node = &bvhNode[rootNodeIdx], * stack[64];
             uint stackPtr = 0;
             bool isOccluded = false;
@@ -495,7 +477,6 @@ namespace Tmpl8 {
                 if ( node->isLeaf() ) {
                     for ( uint i = 0; i < node->primitiveCount; i++ ) {
                         int objIdx = primitiveIndices[node->leftFirst + i];
-                        primitives[objIdx].Intersect( ray );
                         if ( primitives[objIdx].Hit( ray ) ) return true;
                     }
 
@@ -540,23 +521,21 @@ namespace Tmpl8 {
         vector<Primitive> primitives;
         uint* primitiveIndices;
 
-        shared_ptr<ObjectMaterial> red;
-        shared_ptr<ObjectMaterial> green;
-        shared_ptr<ObjectMaterial> blue;
-        shared_ptr<ObjectMaterial> white;
+        ObjectMaterial* red;
+        ObjectMaterial* green;
+        ObjectMaterial* blue;
+        ObjectMaterial* white;
 
-        shared_ptr<ObjectMaterial> mirror;
+        ObjectMaterial* mirror;
 
-        shared_ptr<ObjectMaterial> mix;
+        ObjectMaterial* checkerboard;
 
-        shared_ptr<ObjectMaterial> checkerboard;
+        ObjectMaterial* glass;
+        ObjectMaterial* diamond;
 
-        shared_ptr<ObjectMaterial> glass;
-        shared_ptr<ObjectMaterial> diamond;
+        ObjectMaterial* lamp;
 
-        shared_ptr<ObjectMaterial> lamp;
-
-        shared_ptr<ObjectMaterial> earth;
+        ObjectMaterial* earth;
 
         BVHNode* bvhNode;
         uint rootNodeIdx = 0;

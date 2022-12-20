@@ -30,8 +30,11 @@ public:
 
     uint objIdx;
 
+    ObjectMaterial* material;
+
     Primitive() = default;
-    Primitive( vector<float3> data, PrimitiveType type, uint& idx, mat4 Transform = mat4::Identity() ): data( data ), type( type ), objIdx( idx++ ), Transform( Transform ) {
+    Primitive( vector<float3> data, PrimitiveType type, uint& idx, ObjectMaterial* material, mat4 Transform = mat4::Identity() ): 
+        data( data ), type( type ), objIdx( idx++ ), material( material ), Transform(Transform) {
         // get the inverted transformation matrix
         InvertedTransform = Transform.FastInvertedTransformNoScale();
         // set the centroid
@@ -63,11 +66,12 @@ public:
             float3 oc = ray.O - pos;
             float b = dot( oc, ray.D );
             float c = dot( oc, oc ) - data[0].y;
-            float t, d = b * b - c;
+            float d = b * b - c;
 
             if ( d <= 0 ) return false;
 
-            d = sqrtf( d ), t = -b - d;
+            d = sqrtf( d );
+            float t = -b - d;
             if ( t < ray.t && t > EPS ) return true;
 
             t = d - b;
@@ -466,14 +470,14 @@ public:
     // Sphere data storage: 
     // 0: x -> r    y -> r^2    z -> 1 / r
     // -----------------------------------------------------------
-    static Primitive createSphere( uint& objIdx, float3 position, float r ) {
+    static Primitive createSphere( uint& objIdx, float3 position, float r, ObjectMaterial* material ) {
         // pack needed data into the data array of float3's
         vector<float3> sphereData;
         // save the r because we have the space, might as well.
         sphereData.push_back( float3(r, r * r, 1.0f / r) );
         // switch to using the matrix as position thing instead of p
         mat4 T = mat4::Translate( position );
-        return Primitive( sphereData, SPHERE, objIdx, T );
+        return Primitive( sphereData, SPHERE, objIdx, material, T );
     }
 
     // -----------------------------------------------------------
@@ -481,11 +485,11 @@ public:
     // 0: normal
     // 1: x -> distance
     // -----------------------------------------------------------
-    static Primitive createPlane( uint& objIdx, float3 normal, float distance ) {
+    static Primitive createPlane( uint& objIdx, float3 normal, float distance, ObjectMaterial* material ) {
         vector<float3> planeData;
         planeData.push_back( float3( normal ) );
         planeData.push_back( float3( distance, 0.0f, 0.0f ) );
-        return Primitive( planeData, PLANE, objIdx );
+        return Primitive( planeData, PLANE, objIdx, material );
     }
 
     // -----------------------------------------------------------
@@ -494,7 +498,7 @@ public:
     // 1:  0.5 * size ( close top right )
     // data == old b
     // -----------------------------------------------------------
-    static Primitive createCube( uint& objIdx, float3 pos, float3 size, mat4 T = mat4::Identity() ) {
+    static Primitive createCube( uint& objIdx, float3 pos, float3 size, ObjectMaterial* material, mat4 T = mat4::Identity() ) {
         mat4 transformCube = T;
         if ( length( pos ) > FLT_EPSILON ) {
             transformCube = T * mat4::Translate( pos );
@@ -503,7 +507,7 @@ public:
         vector<float3> cubeData;
         cubeData.push_back( float3( -0.5f * size ) );
         cubeData.push_back( float3(  0.5f * size ) );
-        return Primitive( cubeData, CUBE, objIdx, transformCube );
+        return Primitive( cubeData, CUBE, objIdx, material, transformCube );
     }
 
 
@@ -511,18 +515,18 @@ public:
     // Quad data storage:
     // 0: x -> 0.5 * size
     // -----------------------------------------------------------
-    static Primitive createQuad( uint& objIdx, float size, mat4 T = mat4::Identity() ) {
+    static Primitive createQuad( uint& objIdx, float size, ObjectMaterial* material, mat4 T = mat4::Identity() ) {
         vector<float3> quadData;
         quadData.push_back( float3( 0.5f * size, 0.0f, 0.0f ) );
-        return Primitive( quadData, QUAD, objIdx, T );
+        return Primitive( quadData, QUAD, objIdx, material, T );
     }
 
-    static Primitive createTriangle( uint& objIdx, float3 v0, float3 v1, float3 v2 ) {
+    static Primitive createTriangle( uint& objIdx, float3 v0, float3 v1, float3 v2, ObjectMaterial* material ) {
         vector<float3> triangleData;
         triangleData.push_back( float3( v0 ) );
         triangleData.push_back( float3( v1 ) );
         triangleData.push_back( float3( v2 ) );
-        return Primitive( triangleData, TRIANGLE, objIdx );
+        return Primitive( triangleData, TRIANGLE, objIdx, material );
     }
 
     // -----------------------------------------------------------

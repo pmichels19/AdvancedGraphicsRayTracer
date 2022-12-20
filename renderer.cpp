@@ -26,7 +26,7 @@ float3 Renderer::Trace( Ray& ray, bool lastSpecular, int depth ) {
     // fetch intersection point, normal and material
     float3 I = ray.O + ray.t * ray.D;
     float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
-    shared_ptr<ObjectMaterial> mat = scene.GetMaterial( ray.objIdx );
+    ObjectMaterial* mat = scene.GetMaterial( ray.objIdx );
 
     // from material we can get a bounce ray, an albedo, whether the bounce is from a specular surface and the type of material
     Ray ray_out;
@@ -88,7 +88,7 @@ vector<float3> Renderer::TracePacket( RayPacket& rays ) {
         // fetch intersection point, normal and material
         float3 I = ray.O + ray.t * ray.D;
         float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
-        shared_ptr<ObjectMaterial> mat = scene.GetMaterial( ray.objIdx );
+        ObjectMaterial* mat = scene.GetMaterial( ray.objIdx );
 
         // from material we can get a bounce ray, an albedo, whether the bounce is from a specular surface and the type of material
         Ray ray_out;
@@ -143,7 +143,7 @@ float3 Renderer::WhittedTrace( Ray& ray, int depth ) {
 
     float3 I = ray.O + ray.t * ray.D;
     float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
-    shared_ptr<ObjectMaterial> mat = scene.GetMaterial( ray.objIdx );
+    ObjectMaterial* mat = scene.GetMaterial( ray.objIdx );
 
     MaterialType flag = mat->getFlag();
     float* colorVars = mat->getColorModifier( ray, N );
