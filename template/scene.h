@@ -62,14 +62,13 @@ namespace Tmpl8 {
             primitives.push_back( Primitive::createQuad( primitiveCount, 2, lamp ) );
             primitives.push_back( Primitive::createSphere( primitiveCount, float3( 0 ), 0.5f, earth ) );
             primitives.push_back( Primitive::createCube( primitiveCount, float3( 0.0f ), float3( 1.15f ), diamond ) );
-            primitives.push_back( Primitive::createTriangle( primitiveCount, float3( 0, 0, 3 ), float3( 0.5, -1, 3 ), float3( -0.5, -1, 3 ), red ) );
             primitives.push_back( Primitive::createQuad( primitiveCount, 50, checkerboard, mat4::Translate( float3( 0.0f, -1.0f, 0.0f ) ) ) );
 
             // -----------------------------------------------------------
             // mirror tetrahedron
             // -----------------------------------------------------------
             mat4 tetTransform = 
-                mat4::Translate( float3( 0, 0.5f, 0.5f ) ) * 
+                mat4::Translate( float3( -3.0f, 0.5f, 0.5f ) ) * 
                 mat4::RotateX( 1.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI ) * 
                 mat4::Scale( 0.0075f );
             LoadModel( "assets/tetrahedron.obj", primitiveCount, mirror, tetTransform );
@@ -77,26 +76,33 @@ namespace Tmpl8 {
             // -----------------------------------------------------------
             // rainbow of teapots
             // -----------------------------------------------------------
-            mat4 teapotTransform = mat4::Translate( float3( -3.0f, 0.5f, 4.0f ) );
+            mat4 teapotTransform = mat4::Translate( float3( -3.0f, 0.5f, 5.0f ) );
             LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 0.58f, 0.00f, 0.83f ) ), teapotTransform );
-            teapotTransform = mat4::Translate( float3( -2.0f, 0.5f, 4.0f ) );
+            teapotTransform = mat4::Translate( float3( -2.0f, 0.5f, 5.0f ) );
             LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 0.29f, 0.00f, 0.51f ) ), teapotTransform );
-            teapotTransform = mat4::Translate( float3( -1.0f, 0.5f, 4.0f ) );
+            teapotTransform = mat4::Translate( float3( -1.0f, 0.5f, 5.0f ) );
             LoadModel( "assets/teapot.obj", primitiveCount, blue, teapotTransform );
-            teapotTransform = mat4::Translate( float3(  0.0f, 0.5f, 4.0f ) );
+            teapotTransform = mat4::Translate( float3(  0.0f, 0.5f, 5.0f ) );
             LoadModel( "assets/teapot.obj", primitiveCount, green, teapotTransform );
-            teapotTransform = mat4::Translate( float3( 1.0f, 0.5f, 4.0f ) );
+            teapotTransform = mat4::Translate( float3( 1.0f, 0.5f, 5.0f ) );
             LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 1.0f, 0.0f ) ), teapotTransform);
-            teapotTransform = mat4::Translate( float3( 2.0f, 0.5f, 4.0f ) );
+            teapotTransform = mat4::Translate( float3( 2.0f, 0.5f, 5.0f ) );
             LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 0.5f, 0.0f ) ), teapotTransform );
-            teapotTransform = mat4::Translate( float3( 3.0f, 0.5f, 4.0f ) );
+            teapotTransform = mat4::Translate( float3( 3.0f, 0.5f, 5.0f ) );
             LoadModel( "assets/teapot.obj", primitiveCount, red, teapotTransform );
 
             // -----------------------------------------------------------
-            // lil shiba doggy :3
+            // lil shiba doggy - 76000 Vertices, 5000 Polygons
             // -----------------------------------------------------------
-            mat4 ShibaTransform = mat4::Translate( float3( 0.0f, -1.0f, 2.0f ) ) * mat4::RotateY( PI ) * mat4::Scale( 5.0f );
+            mat4 ShibaTransform = mat4::Translate( float3( 0.0f, -0.9f, 2.0f ) ) * mat4::RotateY( PI ) * mat4::Scale( 5.0f );
             LoadModel( "assets/Shiba.obj", primitiveCount, new Dielectric( float3( 3.5f, 3.5f, 0.5f ), 1.52f ), ShibaTransform );
+            SetTime( 0 );
+
+            // -----------------------------------------------------------
+            // and a stretching cat - 326641 vertices, 653278 polygons
+            // -----------------------------------------------------------
+            mat4 CatTransform = mat4::Translate( float3( 4.0f, 0.3f, 1.0f ) ) * mat4::RotateY( 1.5f * PI );
+            LoadModel( "assets/CatStretching.obj", primitiveCount, new Dielectric( float3( 1.5f, 5.0f, 2.5f ), 1.52f ), CatTransform );
             SetTime( 0 );
 
             // build BVH after objects are moved with setTime
