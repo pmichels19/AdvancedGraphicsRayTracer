@@ -7,12 +7,14 @@ void Renderer::Init() {
     // create fp32 rgb pixel buffer to render to
     accumulator = (float4*) MALLOC64( SCRWIDTH * SCRHEIGHT * 16 );
     memset( accumulator, 0, SCRWIDTH * SCRHEIGHT * 16 );
+
+    printf( PACKET_TRAVERSAL ? "Tracing using ray packets. Whitted style not supported for this.\n" : "Switch between Whitted and Path tracing using the 'K' key.\n" );
 }
 
 // -----------------------------------------------------------
 // Evaluate light transport
 // -----------------------------------------------------------
-float3 Renderer::Trace( Ray& ray, int depth, bool lastSpecular ) {
+float3 Renderer::Trace( Ray& ray, bool lastSpecular, int depth ) {
     if ( depth == 0 ) return float3( 0 );
     // intersect the ray with the scene
     scene.IntersectBVH( ray );
@@ -37,26 +39,26 @@ float3 Renderer::Trace( Ray& ray, int depth, bool lastSpecular ) {
         float3 BRDF = albedo * INVPI;
         float PDF = INV2PI;
         float3 Ld = NextEventDirectIllumination( I, N, BRDF );
-        float3 Ei = Trace( ray_out, depth - 1, specularBounce ) * dot( N, ray_out.D ) / PDF;
+        float3 Ei = Trace( ray_out, specularBounce, depth - 1 ) * dot( N, ray_out.D ) / PDF;
         return BRDF * Ei + Ld;
     } else if ( flag == SPECULAR ) {
         // === SPECULAR ===
-        return albedo * Trace( ray_out, depth - 1, specularBounce );
+        return albedo * Trace( ray_out, specularBounce, depth - 1 );
     } else if ( flag == MIX ) {
         if ( specularBounce ) {
             // === SPECULAR ===
-            return albedo * Trace( ray_out, depth - 1, specularBounce );
+            return albedo * Trace( ray_out, specularBounce, depth - 1 );
         }
 
         // === DIFFUSE ===
         float3 BRDF = albedo * INVPI;
         float PDF = INV2PI;
         float3 Ld = NextEventDirectIllumination( I, N, BRDF );
-        float3 Ei = Trace( ray_out, depth - 1, specularBounce ) * dot( N, ray_out.D ) / PDF;
+        float3 Ei = Trace( ray_out, specularBounce, depth - 1 ) * dot( N, ray_out.D ) / PDF;
         return BRDF * Ei + Ld;
     } else if ( flag == DIELECTRIC ) {
         // === DIELECTRIC ===
-        return albedo * Trace( ray_out, depth - 1, specularBounce );
+        return albedo * Trace( ray_out, specularBounce, depth - 1 );
     } else if ( flag == LIGHT ) {
         // === LIGHT ===
         if ( lastSpecular ) return albedo;
@@ -66,6 +68,70 @@ float3 Renderer::Trace( Ray& ray, int depth, bool lastSpecular ) {
     // we shouldn't be able to get here
     printf("!!! path tracer ran into undefined material flag !!!\n");
     return float3( 0.0f );
+}
+
+vector<float3> Renderer::TracePacket( RayPacket& rays ) {
+    // intersect the rays with the scene
+    scene.IntersectBVHPacket( rays );
+
+    vector<float3> result( PACKET_SIZE );
+    for ( int rayIdx = 0; rayIdx < PACKET_SIZE; rayIdx++ ) {
+        // if we hit nothing return a sky color
+        if ( rays.objIdx[rayIdx] == -1 ) {
+            result[rayIdx] = skyColor(rays.D[rayIdx]);
+            continue;
+        }
+
+        // otherwise get prefilled ray from the packet
+        Ray ray = rays.GetRay( rayIdx );
+        // TODO: everything from here can go in a seperate function, save that for RR implementation :)
+        // fetch intersection point, normal and material
+        float3 I = ray.O + ray.t * ray.D;
+        float3 N = scene.GetNormal( ray.objIdx, I, ray.D );
+        shared_ptr<ObjectMaterial> mat = scene.GetMaterial( ray.objIdx );
+
+        // from material we can get a bounce ray, an albedo, whether the bounce is from a specular surface and the type of material
+        Ray ray_out;
+        bool specularBounce = mat->scatter( ray, I, N, ray_out );
+        float3 albedo = mat->GetColor( ray );
+        MaterialType flag = mat->getFlag();
+
+        if ( flag == DIFFUSE ) {
+            // === DIFFUSE ===
+            float3 BRDF = albedo * INVPI;
+            float PDF = INV2PI;
+            float3 Ld = NextEventDirectIllumination( I, N, BRDF );
+            float3 Ei = Trace( ray_out, specularBounce ) * dot( N, ray_out.D ) / PDF;
+            result[rayIdx] = BRDF * Ei + Ld;
+        } else if ( flag == SPECULAR ) {
+            // === SPECULAR ===
+            result[rayIdx] = albedo * Trace( ray_out, specularBounce );
+        } else if ( flag == MIX ) {
+            if ( specularBounce ) {
+                // === SPECULAR ===
+                result[rayIdx] = albedo * Trace( ray_out, specularBounce );
+            }
+
+            // === DIFFUSE ===
+            float3 BRDF = albedo * INVPI;
+            float PDF = INV2PI;
+            float3 Ld = NextEventDirectIllumination( I, N, BRDF );
+            float3 Ei = Trace( ray_out, specularBounce ) * dot( N, ray_out.D ) / PDF;
+            result[rayIdx] = BRDF * Ei + Ld;
+        } else if ( flag == DIELECTRIC ) {
+            // === DIELECTRIC ===
+            result[rayIdx] = albedo * Trace( ray_out, specularBounce );
+        } else if ( flag == LIGHT ) {
+            // === LIGHT ===
+            result[rayIdx] = albedo;
+        } else {
+            // we shouldn't be able to get here
+            printf( "!!! packet tracer ran into undefined material flag !!!\n" );
+            result[rayIdx] = float3( 0.0f );
+        }
+    }
+
+    return result;
 }
 
 float3 Renderer::WhittedTrace( Ray& ray, int depth ) {
@@ -95,7 +161,7 @@ float3 Renderer::WhittedTrace( Ray& ray, int depth ) {
         result += colorVars[3] * DirectIllumination( I, N );
         // reflection bit
         Ray reflectionRay = Ray( I, normalize( reflect( ray.D, N ) ) );
-        result += ( 1.0f - colorVars[3] ) * WhittedTrace(reflectionRay, depth - 1);
+        result += ( 1.0f - colorVars[3] ) * WhittedTrace( reflectionRay, depth - 1 );
     } else if ( flag == MaterialType::DIELECTRIC ) {
         if ( colorVars[3] < 0 ) {
             // handle Total Internal Reflection (TIR), indicated by a colorModifier with values of -1
@@ -144,6 +210,7 @@ void Renderer::Tick( float deltaTime ) {
     float totalEnergy = 0.0f;
     // lines are executed as OpenMP parallel tasks (disabled in DEBUG)
 #pragma omp parallel for schedule(dynamic)
+#if !PACKET_TRAVERSAL
     for ( int y = 0; y < SCRHEIGHT; y += 4 ) {
         // trace a primary ray for each pixel on the line
         for ( int x = 0; x < SCRWIDTH; x += 4 ) {
@@ -173,8 +240,52 @@ void Renderer::Tick( float deltaTime ) {
                 }
             }
         }
-    }
+}
+#else
+    for ( int y = 0; y < SCRHEIGHT; y += SQRT_PACKET_SIZE ) {
+        for ( int x = 0; x < SCRWIDTH; x += SQRT_PACKET_SIZE ) {
+            // create packet
+            RayPacket packet;
+            for ( int yp = 0; yp < SQRT_PACKET_SIZE; yp++ ) {
+                if ( y + yp >= SCRHEIGHT ) break;
 
+                for ( int xp = 0; xp < SQRT_PACKET_SIZE; xp++ ) {
+                    if ( x + xp >= SCRWIDTH ) continue;
+
+                    int pIdx = xp + yp * SQRT_PACKET_SIZE;
+                    // get a ray from the camera
+                    Ray ray = camera.GetPrimaryRay( x + xp, y + yp );
+                    packet.O[pIdx] = ray.O;
+                    packet.D[pIdx] = ray.D;
+                    packet.t[pIdx] = ray.t;
+                }
+            }
+
+            vector<float3> pixels = TracePacket( packet );
+            for ( int yp = 0; yp < SQRT_PACKET_SIZE; yp++ ) {
+                if ( y + yp >= SCRHEIGHT ) break;
+
+                for ( int xp = 0; xp < SQRT_PACKET_SIZE; xp++ ) {
+                    if ( x + xp >= SCRWIDTH ) continue;
+
+                    int pIdx = xp + yp * SQRT_PACKET_SIZE;
+                    int accIdx = ( x + xp ) + ( y + yp ) * SCRWIDTH;
+
+                    float3 color = pixels[pIdx];
+                    //printf( "(%d, %d)\t\t(%f, %f, %f)\n", x + xp, y + yp, color.x, color.y, color.z );
+                    if ( !stationary || animation ) accumulator[accIdx] = 0;
+                    // increment the hit count so we don't divide by 0
+                    accumulator[accIdx].w += 1;
+                    // take the average over all hits
+                    accumulator[accIdx] = accumulator[accIdx] + ( 1.0f / accumulator[accIdx].w ) * ( float4( color, accumulator[accIdx].w ) - accumulator[accIdx] );
+                    // translate accumulator contents to rgb32 pixels
+                    screen->pixels[accIdx] = RGBF32_to_RGB8( &accumulator[accIdx] );
+                    totalEnergy += accumulator[accIdx].x + accumulator[accIdx].y + accumulator[accIdx].z;
+                }
+            }
+        }
+    }
+#endif
     if (animation) scene.SetTime( animTime += deltaTime * 0.002f );
     if ( tracerSwap ) tracerSwap = !tracerSwap; // if we tossed away the accumulator this frame we want to make sure to start it again next frame with the new tracer
     // performance report - running average - ms, MRays/s

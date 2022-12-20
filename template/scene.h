@@ -52,7 +52,7 @@ namespace Tmpl8 {
             checkerboard = make_shared<Checkerboard>( Checkerboard( float3( 0.1f, 0.1f, 0.1f ), float3( 0.9f, 0.9f, 0.9f ), 0.95f ) );
 
             glass = make_shared<Dielectric>( Dielectric( float3( 0.5f, 0.5f, 0.5f ), 1.52f ) );
-            diamond = make_shared<Dielectric>( Dielectric( float3( 2.0f, 0.5f, 0.7f ), 2.42f ) );
+            diamond = make_shared<Dielectric>( Dielectric( float3( 0.5f, 2.5f, 0.5f ), 2.42f ) );
 
             lamp = make_shared<Light>( Light( float3( 24.0f, 24.0f, 22.0f ), float3( 0.0f, -1.0f, 0.0f ) ) );
 
@@ -64,7 +64,10 @@ namespace Tmpl8 {
             primitives.push_back( Primitive::createTriangle( primitiveCount, float3( 0, 0, 3 ), float3( 0.5, -1, 3 ), float3( -0.5, -1, 3 ) ) );
             primitives.push_back( Primitive::createQuad( primitiveCount, 50, mat4::Translate( float3( 0.0f, -1.0f, 0.0f ) ) ) );
 
-            mat4 tetTransform = mat4::Translate( float3( 0, 0.5f, 0.5f ) ) * mat4::RotateX( 0.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI ) * mat4::Scale( 0.01f );
+            mat4 tetTransform = 
+                mat4::Translate( float3( 0, 1.5f, 0.5f ) ) * 
+                mat4::RotateX( 1.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI ) * 
+                mat4::Scale( 0.01f );
             readObjFile( "assets/tetrahedron.obj", primitiveCount, tetTransform );
             mat4 teapotTransform = mat4::Translate( float3( 0, 0.5f, -4.0f ) );
             readObjFile( "assets/teapot.obj", primitiveCount, teapotTransform );
@@ -79,7 +82,6 @@ namespace Tmpl8 {
             }
 
             bvhNode = (BVHNode*) MALLOC64( ( 2 * primitiveCount + 1 ) * sizeof( BVHNode ) );
-            nodesUsed = 2; // skip a node because memory alignment
             BuildBVH();
             printf( "Finished BVH!\n" );
 
@@ -132,6 +134,7 @@ namespace Tmpl8 {
             BVHNode& root = bvhNode[rootNodeIdx];
             root.leftFirst = 0;
             root.primitiveCount = primitiveCount;
+            nodesUsed = 2; // skip a node because memory alignment
 
             UpdateNodeBounds( rootNodeIdx );
             Subdivide( rootNodeIdx );
@@ -319,6 +322,7 @@ namespace Tmpl8 {
                 primitives[i].Intersect( ray );
             }
         }
+
         void IntersectBVH( Ray& ray ) {
             BVHNode* node = &bvhNode[rootNodeIdx];
             BVHNode* stack[64];
@@ -356,6 +360,117 @@ namespace Tmpl8 {
             }
         }
 
+        void IntersectBVHPacket( RayPacket& rays ) {
+            rays.firstActive = 0;
+            // start at the root
+            BVHNode* node = &bvhNode[rootNodeIdx];
+
+            // stack stuff
+            uint stackPtr = 0;
+            BVHNode* stack[64];
+            while ( true ) {
+                Ray testRay = rays.GetRay( rays.firstActive );
+
+                if ( HitsAABB( testRay, node->aabbMin, node->aabbMax ) ) {
+                    if ( node->isLeaf() ) {
+                        for ( int i = 0; i < PACKET_SIZE; i++ ) {
+                            Ray ray = rays.GetRay( i );
+
+                            for ( uint idx = 0; idx < node->primitiveCount; idx++ ) {
+                                int objIdx = primitiveIndices[node->leftFirst + idx];
+                                primitives[objIdx].Intersect( ray );
+                            }
+
+                            if ( ray.t < rays.t[i] ) {
+                                rays.t[i] = ray.t;
+                                rays.u[i] = ray.u;
+                                rays.v[i] = ray.v;
+                                rays.objIdx[i] = ray.objIdx;
+                            }
+                        }
+
+                        // stop the loop if we are at stack pointer 0, aka the root
+                        if ( stackPtr == 0 ) break;
+
+                        node = stack[--stackPtr];
+                        continue;
+                    }
+                } else {
+                    // go over all rays to find the first one that does intersect with this node
+                    bool foundHit = false;
+                    for ( int i = 0; i < PACKET_SIZE; i++ ) {
+                        testRay = rays.GetRay( i );
+
+                        if ( HitsAABB( testRay, node->aabbMin, node->aabbMax ) ) {
+                            rays.firstActive = i;
+                            foundHit = true;
+                            break;
+                        }
+                    }
+
+                    if ( !foundHit ) {
+                        if ( stackPtr == 0 ) break;
+
+                        node = stack[--stackPtr];
+                        continue;
+                    }
+
+                    if ( node->isLeaf() ) {
+                        for ( int i = 0; i < PACKET_SIZE; i++ ) {
+                            Ray ray = rays.GetRay( i );
+
+                            for ( uint idx = 0; idx < node->primitiveCount; idx++ ) {
+                                int objIdx = primitiveIndices[node->leftFirst + idx];
+                                primitives[objIdx].Intersect( ray );
+                            }
+
+                            if ( ray.t < rays.t[i] ) {
+                                rays.t[i] = ray.t;
+                                rays.u[i] = ray.u;
+                                rays.v[i] = ray.v;
+                                rays.objIdx[i] = ray.objIdx;
+                            }
+                        }
+
+                        if ( stackPtr == 0 ) break;
+
+                        node = stack[--stackPtr];
+                        continue;
+                    }
+                }
+
+                BVHNode* child1 = &bvhNode[node->leftFirst];
+                BVHNode* child2 = &bvhNode[node->leftFirst + 1];
+                float dist1 = IntersectAABB( testRay, child1->aabbMin, child1->aabbMax );
+                float dist2 = IntersectAABB( testRay, child2->aabbMin, child2->aabbMax );
+                if ( dist1 > dist2 ) {
+                    swap( dist1, dist2 );
+                    swap( child1, child2 );
+                }
+
+                node = child1;
+                stack[stackPtr++] = child2;
+            }
+        }
+
+        bool HitsAABB( const Ray& ray, const float3 bmin, const float3 bmax ) {
+            float tx1 = ( bmin.x - ray.O.x ) * ray.rD.x;
+            float tx2 = ( bmax.x - ray.O.x ) * ray.rD.x;
+            float tmin = min( tx1, tx2 );
+            float tmax = max( tx1, tx2 );
+
+            float ty1 = ( bmin.y - ray.O.y ) * ray.rD.y;
+            float ty2 = ( bmax.y - ray.O.y ) * ray.rD.y;
+            tmin = max( tmin, min( ty1, ty2 ) );
+            tmax = min( tmax, max( ty1, ty2 ) );
+
+            float tz1 = ( bmin.z - ray.O.z ) * ray.rD.z;
+            float tz2 = ( bmax.z - ray.O.z ) * ray.rD.z;
+            tmin = max( tmin, min( tz1, tz2 ) );
+            tmax = min( tmax, max( tz1, tz2 ) );
+            return tmax >= tmin && tmin < ray.t&& tmax > 0;
+        }
+
         float IntersectAABB( const Ray& ray, const float3 bmin, const float3 bmax ) {
             float tx1 = ( bmin.x - ray.O.x ) * ray.rD.x;
             float tx2 = ( bmax.x - ray.O.x ) * ray.rD.x;
@@ -381,12 +496,13 @@ namespace Tmpl8 {
 
             BVHNode* node = &bvhNode[rootNodeIdx], * stack[64];
             uint stackPtr = 0;
+            bool isOccluded = false;
             while ( true ) {
                 if ( node->isLeaf() ) {
                     for ( uint i = 0; i < node->primitiveCount; i++ ) {
                         int objIdx = primitiveIndices[node->leftFirst + i];
                         primitives[objIdx].Intersect( ray );
-                        if ( ray.t < rayLength && ray.t > EPS ) return true;
+                        if ( ray.t < rayLength && ray.t > EPS ) return true; // TODO: make HIT function
                     }
 
                     if ( stackPtr == 0 ) break;
@@ -423,16 +539,6 @@ namespace Tmpl8 {
             float3 N = primitives[ objIdx ].GetNormal( I );
             if ( dot( N, wo ) > 0 ) N = -N; // hit backside / inside
             return N;
-        }
-        float GetReflectivity( int objIdx, float3 I ) const
-        {
-            if ( objIdx == 1 /* ball */ ) return 1;
-            if ( objIdx == 6 /* floor */ ) return 0.3f;
-            return 0;
-        }
-        float GetRefractivity( int objIdx, float3 I ) const
-        {
-            return objIdx == 3 ? 1.0f : 0.0f;
         }
         __declspec( align( 64 ) ) // start a new cacheline here
             float animTime = 0;
