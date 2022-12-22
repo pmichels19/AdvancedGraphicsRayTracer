@@ -209,6 +209,9 @@ void Renderer::Tick( float deltaTime ) {
     // pixel loop
     Timer t;
     float totalEnergy = 0.0f;
+#ifdef BVH_ANALYSIS
+    float maxDepth = 0;
+#endif
     // lines are executed as OpenMP parallel tasks (disabled in DEBUG)
 #pragma omp parallel for schedule(dynamic)
 #if !PACKET_TRAVERSAL
@@ -221,11 +224,16 @@ void Renderer::Tick( float deltaTime ) {
                     float3 result = float3( 0 );
                     for ( samples = 0; samples < 1; samples++ ) { // iterate to 1 to disable anti-aliasing, going higher will drastically impact performance
                         if ( animation ) scene.SetTime( animTime + Rand( deltaTime * 0.002f ) );
+#ifdef BVH_ANALYSIS
+                        result += DepthTrace( camera.GetPrimaryRay( x + u, y + v ) );
+                        if ( result.x > maxDepth ) maxDepth = result.x;
+#else
                         if ( useWhitted ) {
                             result += WhittedTrace( camera.GetPrimaryRay( x + u, y + v ) );
                         } else {
                             result += Trace( camera.GetPrimaryRay( x + u, y + v ) );
                         }
+#endif
                     }
 
                     int accIdx = ( x + u ) + ( y + v ) * SCRWIDTH;
@@ -235,13 +243,10 @@ void Renderer::Tick( float deltaTime ) {
                     accumulator[accIdx].w += 1;
                     // take the average over all hits
                     accumulator[accIdx] = accumulator[accIdx] + ( 1.0f / accumulator[accIdx].w ) * ( float4( ( 1.0f / (float) samples ) * result, accumulator[accIdx].w ) - accumulator[accIdx] );
-                    // translate accumulator contents to rgb32 pixels
-                    screen->pixels[accIdx] = RGBF32_to_RGB8( &accumulator[accIdx] );
-                    totalEnergy += accumulator[accIdx].x + accumulator[accIdx].y + accumulator[accIdx].z;
                 }
             }
         }
-}
+    }
 #else
     for ( int y = 0; y < SCRHEIGHT; y += SQRT_PACKET_SIZE ) {
         for ( int x = 0; x < SCRWIDTH; x += SQRT_PACKET_SIZE ) {
@@ -279,20 +284,35 @@ void Renderer::Tick( float deltaTime ) {
                     accumulator[accIdx].w += 1;
                     // take the average over all hits
                     accumulator[accIdx] = accumulator[accIdx] + ( 1.0f / accumulator[accIdx].w ) * ( float4( color, accumulator[accIdx].w ) - accumulator[accIdx] );
-                    // translate accumulator contents to rgb32 pixels
-                    screen->pixels[accIdx] = RGBF32_to_RGB8( &accumulator[accIdx] );
-                    totalEnergy += accumulator[accIdx].x + accumulator[accIdx].y + accumulator[accIdx].z;
                 }
             }
         }
     }
 #endif
+    for ( int y = 0; y < SCRHEIGHT; y++ ) {
+        // trace a primary ray for each pixel on the line
+        for ( int x = 0; x < SCRWIDTH; x++ ) {
+            int accIdx = x + y * SCRWIDTH;
+            // translate accumulator contents to rgb32 pixels
+#ifdef BVH_ANALYSIS
+            accumulator[accIdx] /= maxDepth;
+            screen->pixels[accIdx] = RGBF32_to_RGB8( &accumulator[accIdx] );
+#else
+            screen->pixels[accIdx] = RGBF32_to_RGB8( &accumulator[accIdx] );
+#endif
+            totalEnergy += accumulator[accIdx].x + accumulator[accIdx].y + accumulator[accIdx].z;
+        }
+    }
+
     if (animation) scene.SetTime( animTime += deltaTime * 0.002f );
     if ( tracerSwap ) tracerSwap = !tracerSwap; // if we tossed away the accumulator this frame we want to make sure to start it again next frame with the new tracer
+
+#ifndef BVH_ANALYSIS
     // performance report - running average - ms, MRays/s
     static float avg = 10, alpha = 1;
     avg = ( 1 - alpha ) * avg + alpha * t.elapsed() * 1000;
     if ( alpha > 0.05f ) alpha *= 0.5f;
     float fps = 1000 / avg, rps = ( SCRWIDTH * SCRHEIGHT ) * fps;
     printf( "%5.2fms (%.1fps) - %.1fMrays/s\t\t%.1f\n", avg, fps, rps / 1000000, totalEnergy );
+#endif
 }

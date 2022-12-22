@@ -3,6 +3,11 @@
 class Checkerboard: public ObjectMaterial {
 public:
     Checkerboard() = default;
+    Checkerboard( const float3& color1, const float3& color2 ): color1( color1 ), color2( color2 ) {
+        diffuse = 1.0f;
+        specular = 0.0f;
+    }
+
     Checkerboard( const float3& color1, const float3& color2, const float& diffuse ): color1( color1 ), color2( color2 ) {
         this->diffuse = clamp( diffuse, 0.0f, 1.0f );
         specular = 1.0f - this->diffuse;

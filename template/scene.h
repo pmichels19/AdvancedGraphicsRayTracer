@@ -47,7 +47,7 @@ namespace Tmpl8 {
 
             mirror = new Mirror( float3( 0.9f, 0.9f, 0.9f ) );
 
-            checkerboard = new Checkerboard( float3( 0.1f, 0.1f, 0.1f ), float3( 0.9f, 0.9f, 0.9f ), 0.85f );
+            checkerboard = new Checkerboard( float3( 0.1f, 0.1f, 0.1f ), float3( 0.9f, 0.9f, 0.9f ) );
 
             glass = new Dielectric( float3( 0.5f, 0.5f, 0.5f ), 1.52f );
             diamond = new Dielectric( float3( 0.5f, 2.5f, 0.5f ), 2.42f );
@@ -76,33 +76,33 @@ namespace Tmpl8 {
             // -----------------------------------------------------------
             // rainbow of teapots
             // -----------------------------------------------------------
-            mat4 teapotTransform = mat4::Translate( float3( -3.0f, 0.5f, 5.0f ) );
+            mat4 teapotTransform = mat4::Translate( float3( -4.5f, 0.5f, 5.0f ) );
             LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 0.58f, 0.00f, 0.83f ) ), teapotTransform );
-            teapotTransform = mat4::Translate( float3( -2.0f, 0.5f, 5.0f ) );
+            teapotTransform = mat4::Translate( float3( -3.0f, 0.5f, 5.0f ) );
             LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 0.29f, 0.00f, 0.51f ) ), teapotTransform );
-            teapotTransform = mat4::Translate( float3( -1.0f, 0.5f, 5.0f ) );
+            teapotTransform = mat4::Translate( float3( -1.5f, 0.5f, 5.0f ) );
             LoadModel( "assets/teapot.obj", primitiveCount, blue, teapotTransform );
             teapotTransform = mat4::Translate( float3(  0.0f, 0.5f, 5.0f ) );
             LoadModel( "assets/teapot.obj", primitiveCount, green, teapotTransform );
-            teapotTransform = mat4::Translate( float3( 1.0f, 0.5f, 5.0f ) );
+            teapotTransform = mat4::Translate( float3( 1.5f, 0.5f, 5.0f ) );
             LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 1.0f, 0.0f ) ), teapotTransform);
-            teapotTransform = mat4::Translate( float3( 2.0f, 0.5f, 5.0f ) );
-            LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 0.5f, 0.0f ) ), teapotTransform );
             teapotTransform = mat4::Translate( float3( 3.0f, 0.5f, 5.0f ) );
+            LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 0.5f, 0.0f ) ), teapotTransform );
+            teapotTransform = mat4::Translate( float3( 4.5f, 0.5f, 5.0f ) );
             LoadModel( "assets/teapot.obj", primitiveCount, red, teapotTransform );
 
             // -----------------------------------------------------------
             // lil shiba doggy - 76000 Vertices, 5000 Polygons
             // -----------------------------------------------------------
             mat4 ShibaTransform = mat4::Translate( float3( 0.0f, -0.9f, 2.0f ) ) * mat4::RotateY( PI ) * mat4::Scale( 5.0f );
-            LoadModel( "assets/Shiba.obj", primitiveCount, new Dielectric( float3( 3.5f, 3.5f, 0.5f ), 1.52f ), ShibaTransform );
+            LoadModel( "assets/Shiba.obj", primitiveCount, new Diffuse( float3( 0.25f, 0.95f, 0.95f ) ), ShibaTransform );
             SetTime( 0 );
 
             // -----------------------------------------------------------
             // and a stretching cat - 326641 vertices, 653278 polygons
             // -----------------------------------------------------------
             mat4 CatTransform = mat4::Translate( float3( 4.0f, 0.3f, 1.0f ) ) * mat4::RotateY( 1.5f * PI );
-            LoadModel( "assets/CatStretching.obj", primitiveCount, new Dielectric( float3( 1.5f, 5.0f, 2.5f ), 1.52f ), CatTransform );
+            LoadModel( "assets/CatStretching.obj", primitiveCount, new Dielectric( float3( 0.5f, 2.5f, 10.0f ), 1.52f ), CatTransform );
             SetTime( 0 );
 
             // build BVH after objects are moved with setTime
@@ -113,6 +113,18 @@ namespace Tmpl8 {
             bvhNode = (BVHNode*) MALLOC64( ( 2 * primitiveCount + 1 ) * sizeof( BVHNode ) );
             BuildBVH();
             printf( "Finished BVH!\n" );
+#ifdef BVH_ANALYSIS
+            printf( "%d nodes for %d primitives.\n", nodesUsed - 1, primitiveCount );
+            float totalArea = 0.0f;
+            for ( int i = 0; i < nodesUsed; i++ ) {
+                aabb nodeBox( bvhNode[i].aabbMin, bvhNode[i].aabbMax );
+                totalArea += nodeBox.Area();
+                if ( i == 0 ) i++;
+            }
+
+            printf( "Found area of %f\nTree depth: %d\n", totalArea, maxDepthBVH( rootNodeIdx ) );
+#endif
+
 
             // this is outdated now
             // plane[0] = Plane( primitiveCount + 1, float3( 1, 0, 0 ), 3 );			// 10000: left wall
@@ -123,6 +135,15 @@ namespace Tmpl8 {
             // plane[5] = Plane( primitiveCount + 6, float3( 0, 0, -1 ), 3.99f );		// 10005: back wall
             // Note: once we have triangle support we should get rid of the class
             // hierarchy: virtuals reduce performance somewhat.
+        }
+
+        int maxDepthBVH( uint nodeIdx ) {
+            BVHNode& node = bvhNode[nodeIdx];
+            if ( node.isLeaf() ) return 0;
+
+            int lDepth = maxDepthBVH( node.leftFirst );
+            int rDepth = maxDepthBVH( node.leftFirst + 1 );
+            return max( lDepth, rDepth ) + 1;
         }
 
         void LoadModel( const string fileName, uint& objIdx, ObjectMaterial* material, mat4 transform = mat4::Identity() ) {
@@ -345,6 +366,47 @@ namespace Tmpl8 {
         }
         float3 GetLightDir() const {
             return float3( 0.0f, -1.0f, 0.0f );
+        }
+
+        float BVHDepth( Ray& ray ) {
+            BVHNode* node = &bvhNode[rootNodeIdx];
+            BVHNode* stack[64];
+            uint stackPtr = 0;
+            int nodeTraversals = 0;
+            while ( true ) {
+                nodeTraversals++;
+                if ( node->isLeaf() ) {
+                    for ( uint i = 0; i < node->primitiveCount; i++ ) {
+                        int objIdx = primitiveIndices[node->leftFirst + i];
+                        primitives[objIdx].Intersect( ray );
+                    }
+
+                    if ( stackPtr == 0 ) break;
+
+                    node = stack[--stackPtr];
+                    continue;
+                }
+
+                BVHNode* child1 = &bvhNode[node->leftFirst];
+                BVHNode* child2 = &bvhNode[node->leftFirst + 1];
+
+                float dist1 = IntersectAABB( ray, child1->aabbMin, child1->aabbMax );
+                float dist2 = IntersectAABB( ray, child2->aabbMin, child2->aabbMax );
+                if ( dist1 > dist2 ) {
+                    swap( dist1, dist2 );
+                    swap( child1, child2 );
+                }
+
+                if ( dist1 == 1e30f ) {
+                    if ( stackPtr == 0 ) break;
+                    node = stack[--stackPtr];
+                } else {
+                    node = child1;
+                    if ( dist2 != 1e30f ) stack[stackPtr++] = child2;
+                }
+            }
+
+            return nodeTraversals;
         }
 
         void IntersectBVH( Ray& ray ) {

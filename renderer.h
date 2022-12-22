@@ -12,6 +12,12 @@ namespace Tmpl8 {
 
         float3 WhittedTrace( Ray& ray, int depth = 20 );
 
+        float3 DepthTrace( Ray& ray ) {
+            int steps = scene.BVHDepth( ray );
+            //printf("%d\n", steps );
+            return float3( steps, 1.0f, 0.0f );
+        }
+
         float3 skyColor( float3 D ) {
             uint u = skydome->width * atan2f( D.z, D.x ) * INV2PI - 0.5f;
             uint v = skydome->height * acosf( D.y ) * INVPI - 0.5f;
@@ -134,10 +140,9 @@ namespace Tmpl8 {
             if ( key == 83 ) zMove -= 1; // s
 
 #if !PACKET_TRAVERSAL
-            // switching ray tracer styles
-            if ( key == 75 ) useWhitted = !useWhitted, tracerSwap = true, printf( "Switching to %s.\n", useWhitted ? "Whitted style ray tracer" : "Kajiya path tracer" ); // k
+            // switching ray tracer styles with K
+            if ( key == 75 ) useWhitted = !useWhitted, tracerSwap = true, printf( "Switching to %s.\n", useWhitted ? "Whitted style ray tracer" : "Kajiya path tracer" );
 #endif
-
         }
 
         // data members
