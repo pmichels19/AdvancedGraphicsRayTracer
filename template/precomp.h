@@ -891,6 +891,10 @@ public:
 		return ((va[0] >= 0) && (va[1] >= 0) && (va[2] >= 0) &&
 			(vb[0] >= 0) && (vb[1] >= 0) && (vb[2] >= 0));
 	}
+	bool Contains( const float3& p ) {
+		__m128 p4 = _mm_setr_ps( p.x, p.y, p.z, 0 );
+		return Contains( p4 );
+	}
 	__inline void Grow( const aabb& bb ) { bmin4 = _mm_min_ps( bmin4, bb.bmin4 ); bmax4 = _mm_max_ps( bmax4, bb.bmax4 ); }
 	__inline void Grow( const __m128& p ) { bmin4 = _mm_min_ps( bmin4, p ); bmax4 = _mm_max_ps( bmax4, p ); }
 	__inline void Grow( const __m128 min4, const __m128 max4 ) { bmin4 = _mm_min_ps( bmin4, min4 ); bmax4 = _mm_max_ps( bmax4, max4 ); }
@@ -1656,6 +1660,11 @@ public:
 #include "tiny_obj_loader.h"
 
 //#define BVH_ANALYSIS
+
+//#define SPATIAL_SPLITS
+#define SPATIAL_SPLIT_ALPHA 0.00001f
+
+#include <unordered_map>
 
 #include "Ray.h"
 

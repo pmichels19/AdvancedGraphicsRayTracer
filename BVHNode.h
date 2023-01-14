@@ -13,7 +13,22 @@ struct BVHNode {
     }
 };
 
+struct BVHSplit {
+    aabb left;
+    aabb right;
+    vector<int> leftChildren;
+    vector<int> rightChildren;
+
+    float intersectionArea() {
+        return left.Intersection(right).Area();
+    }
+};
+
 struct BVHBin {
     aabb bounds;
+#ifdef SPATIAL_SPLITS
+    int entry = 0;
+    int exit = 0;
+#endif
     int primitiveCount = 0;
 };
