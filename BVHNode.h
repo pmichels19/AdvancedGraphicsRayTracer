@@ -1,6 +1,6 @@
 #pragma once
 
-#define BIN_COUNT 16
+#define BIN_COUNT 8
 
 struct BVHNode {
     float3 aabbMin;
@@ -16,8 +16,8 @@ struct BVHNode {
 struct BVHSplit {
     aabb left;
     aabb right;
-    vector<int> leftChildren;
-    vector<int> rightChildren;
+    vector<uint> leftChildren;
+    vector<uint> rightChildren;
 
     float intersectionArea() {
         return left.Intersection(right).Area();

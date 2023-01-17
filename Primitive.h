@@ -470,9 +470,9 @@ public:
     /**
     * Test if the primitive is inside a bin and adjust the current aabb of that bin if it is
     **/
-    bool fitInBin( aabb& bounds, float boundsMin, float boundsMax, int axis ) {
-        // early out if the primitive is not in the bin
-        if ( !isInBin( boundsMin, boundsMax, axis ) ) return false;
+    aabb fitInBin( float boundsMin, float boundsMax, int axis ) {
+        aabb boundsInBin;
+        // TODO: broken for quads
 
         if ( type == SPHERE ) {
             float3 centroid = GetCentroid();
@@ -485,8 +485,8 @@ public:
                 max[axis] = fminf( centroidAtAxis + r, boundsMax );
                 float3 min = centroid + float3( -r );
                 min[axis] = fmaxf( centroidAtAxis - r, boundsMin );
-                bounds.Grow( max );
-                bounds.Grow( min );
+                boundsInBin.Grow( max );
+                boundsInBin.Grow( min );
             } else {
                 // otherwise we find the closest plane of intersection and get the min and max of the circle of intersection
                 // distance between centroid and boundsMin plane, assume that centroidAtAxis > boundsMax
@@ -506,122 +506,124 @@ public:
                 max[axis] = maxAxis;
                 float3 min = centroid + float3( -rCircle );
                 min[axis] = minAxis;
-                bounds.Grow( max );
-                bounds.Grow( min );
+                boundsInBin.Grow( max );
+                boundsInBin.Grow( min );
             }
         } else if ( type == PLANE ) {
             // TODO
-            return false;
+            return boundsInBin;
         } else if ( type == CUBE ) {
             // all the outer points
             float3 A = TransformPosition( data[0], Transform );
-            bool Ain = A[axis] > boundsMin && A[axis] < boundsMax;
+            bool Ain = A[axis] >= boundsMin && A[axis] <= boundsMax;
             float3 B = TransformPosition( float3( data[1].x, data[0].y, data[0].z ), Transform );
-            bool Bin = B[axis] > boundsMin && B[axis] < boundsMax;
+            bool Bin = B[axis] >= boundsMin && B[axis] <= boundsMax;
             float3 C = TransformPosition( float3( data[0].x, data[1].y, data[0].z ), Transform );
-            bool Cin = C[axis] > boundsMin && C[axis] < boundsMax;
+            bool Cin = C[axis] >= boundsMin && C[axis] <= boundsMax;
             float3 D = TransformPosition( float3( data[0].x, data[0].y, data[1].z ), Transform );
-            bool Din = D[axis] > boundsMin && D[axis] < boundsMax;
+            bool Din = D[axis] >= boundsMin && D[axis] <= boundsMax;
 
             float3 E = TransformPosition( data[1], Transform );
-            bool Ein = E[axis] > boundsMin && E[axis] < boundsMax;
+            bool Ein = E[axis] >= boundsMin && E[axis] <= boundsMax;
             float3 F = TransformPosition( float3( data[0].x, data[1].y, data[1].z ), Transform );
-            bool Fin = F[axis] > boundsMin && F[axis] < boundsMax;
+            bool Fin = F[axis] >= boundsMin && F[axis] <= boundsMax;
             float3 G = TransformPosition( float3( data[1].x, data[0].y, data[1].z ), Transform );
-            bool Gin = G[axis] > boundsMin && G[axis] < boundsMax;
+            bool Gin = G[axis] >= boundsMin && G[axis] <= boundsMax;
             float3 H = TransformPosition( float3( data[1].x, data[1].y, data[0].z ), Transform );
-            bool Hin = H[axis] > boundsMin && H[axis] < boundsMax;
+            bool Hin = H[axis] >= boundsMin && H[axis] <= boundsMax;
             if ( Ain && Bin && Cin && Din && Ein && Fin && Gin && Hin) {
                 // easy if the whole cube is in the bin already
-                bounds.Grow( GetAABBMin() );
-                bounds.Grow( GetAABBMax() );
+                boundsInBin.Grow( GetAABBMin() );
+                boundsInBin.Grow( GetAABBMax() );
             } else {
                 // if not we have to check the intersection points between the edges and the splitplanes of the bin
-                if ( Ain != Bin ) intersectBoundary( bounds, A, B, boundsMin, boundsMax, axis );
-                if ( Ain != Cin ) intersectBoundary( bounds, A, C, boundsMin, boundsMax, axis );
-                if ( Ain != Din ) intersectBoundary( bounds, A, D, boundsMin, boundsMax, axis );
+                // we only do so if both points are on opposite sides of the split planes or one of them is in and the other is outside of the bin
+                if ( Ain != Bin || onDifferentSides( A, B, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( A, B, boundsMin, boundsMax, axis ) );
+                if ( Ain != Cin || onDifferentSides( A, C, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( A, C, boundsMin, boundsMax, axis ) );
+                if ( Ain != Din || onDifferentSides( A, D, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( A, D, boundsMin, boundsMax, axis ) );
 
-                if ( Ein != Fin ) intersectBoundary( bounds, E, F, boundsMin, boundsMax, axis );
-                if ( Ein != Gin ) intersectBoundary( bounds, E, G, boundsMin, boundsMax, axis );
-                if ( Ein != Hin ) intersectBoundary( bounds, E, H, boundsMin, boundsMax, axis );
+                if ( Ein != Fin || onDifferentSides( E, F, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( E, F, boundsMin, boundsMax, axis ) );
+                if ( Ein != Gin || onDifferentSides( E, G, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( E, G, boundsMin, boundsMax, axis ) );
+                if ( Ein != Hin || onDifferentSides( E, H, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( E, H, boundsMin, boundsMax, axis ) );
 
-                if ( Cin != Fin ) intersectBoundary( bounds, C, F, boundsMin, boundsMax, axis );
-                if ( Cin != Hin ) intersectBoundary( bounds, C, H, boundsMin, boundsMax, axis );
+                if ( Cin != Fin || onDifferentSides( C, F, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( C, F, boundsMin, boundsMax, axis ) );
+                if ( Cin != Hin || onDifferentSides( C, H, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( C, H, boundsMin, boundsMax, axis ) );
 
-                if ( Bin != Gin ) intersectBoundary( bounds, B, G, boundsMin, boundsMax, axis );
-                if ( Bin != Hin ) intersectBoundary( bounds, B, H, boundsMin, boundsMax, axis );
+                if ( Bin != Gin || onDifferentSides( B, G, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( B, G, boundsMin, boundsMax, axis ) );
+                if ( Bin != Hin || onDifferentSides( B, H, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( B, H, boundsMin, boundsMax, axis ) );
 
-                if ( Din != Fin ) intersectBoundary( bounds, D, F, boundsMin, boundsMax, axis );
-                if ( Din != Gin ) intersectBoundary( bounds, D, G, boundsMin, boundsMax, axis );
+                if ( Din != Fin || onDifferentSides( D, F, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( D, F, boundsMin, boundsMax, axis ) );
+                if ( Din != Gin || onDifferentSides( D, G, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( D, G, boundsMin, boundsMax, axis ) );
 
                 // also check any triangle points inside of the bin
-                if ( Ain ) bounds.Grow( A );
-                if ( Bin ) bounds.Grow( B );
-                if ( Cin ) bounds.Grow( C );
-                if ( Din ) bounds.Grow( D );
+                if ( Ain ) boundsInBin.Grow( A );
+                if ( Bin ) boundsInBin.Grow( B );
+                if ( Cin ) boundsInBin.Grow( C );
+                if ( Din ) boundsInBin.Grow( D );
 
-                if ( Ein ) bounds.Grow( E );
-                if ( Fin ) bounds.Grow( F );
-                if ( Gin ) bounds.Grow( G );
-                if ( Hin ) bounds.Grow( H );
+                if ( Ein ) boundsInBin.Grow( E );
+                if ( Fin ) boundsInBin.Grow( F );
+                if ( Gin ) boundsInBin.Grow( G );
+                if ( Hin ) boundsInBin.Grow( H );
             }
         } else if ( type == QUAD ) {
             float size = data[0].x;
             // all the outer points
             float3 A = TransformPosition( float3( -size, 0, -size ), Transform );
-            bool Ain = A[axis] > boundsMin && A[axis] < boundsMax;
+            bool Ain = A[axis] >= boundsMin && A[axis] <= boundsMax;
             float3 B = TransformPosition( float3( -size, 0,  size ), Transform );
-            bool Bin = B[axis] > boundsMin && B[axis] < boundsMax;
+            bool Bin = B[axis] >= boundsMin && B[axis] <= boundsMax;
             float3 C = TransformPosition( float3(  size, 0, -size ), Transform );
-            bool Cin = C[axis] > boundsMin && C[axis] < boundsMax;
+            bool Cin = C[axis] >= boundsMin && C[axis] <= boundsMax;
             float3 D = TransformPosition( float3(  size, 0,  size ), Transform );
-            bool Din = D[axis] > boundsMin && D[axis] < boundsMax;
+            bool Din = D[axis] >= boundsMin && D[axis] <= boundsMax;
             if ( Ain && Bin && Cin && Din ) {
                 // easy if the whole cube is in the bin already
-                bounds.Grow( GetAABBMin() );
-                bounds.Grow( GetAABBMax() );
+                boundsInBin.Grow( GetAABBMin() );
+                boundsInBin.Grow( GetAABBMax() );
             } else {
                 // if not we have to check the intersection points between the edges and the splitplanes of the bin
-                if ( Ain != Bin ) intersectBoundary( bounds, A, B, boundsMin, boundsMax, axis );
-                if ( Ain != Cin ) intersectBoundary( bounds, A, C, boundsMin, boundsMax, axis );
-                if ( Din != Bin ) intersectBoundary( bounds, D, B, boundsMin, boundsMax, axis );
-                if ( Din != Cin ) intersectBoundary( bounds, D, C, boundsMin, boundsMax, axis );
+                // we only do so if both points are on opposite sides of the split planes or one of them is in and the other is outside of the bin
+                if ( Ain != Bin || onDifferentSides( A, B, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( A, B, boundsMin, boundsMax, axis ) );
+                if ( Ain != Cin || onDifferentSides( A, C, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( A, C, boundsMin, boundsMax, axis ) );
+                if ( Din != Bin || onDifferentSides( D, B, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( D, B, boundsMin, boundsMax, axis ) );
+                if ( Din != Cin || onDifferentSides( D, C, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( D, C, boundsMin, boundsMax, axis ) );
 
                 // also check any triangle points inside of the bin
-                if ( Ain ) bounds.Grow( A );
-                if ( Bin ) bounds.Grow( B );
-                if ( Cin ) bounds.Grow( C );
-                if ( Din ) bounds.Grow( D );
+                if ( Ain ) boundsInBin.Grow( A );
+                if ( Bin ) boundsInBin.Grow( B );
+                if ( Cin ) boundsInBin.Grow( C );
+                if ( Din ) boundsInBin.Grow( D );
             }
         } else if ( type == TRIANGLE ) {
             // all the outer points
             float3 A = TransformPosition( data[0], Transform );
-            bool Ain = A[axis] > boundsMin && A[axis] < boundsMax;
+            bool Ain = A[axis] >= boundsMin && A[axis] <= boundsMax;
             float3 B = TransformPosition( data[1], Transform );
-            bool Bin = B[axis] > boundsMin && B[axis] < boundsMax;
+            bool Bin = B[axis] >= boundsMin && B[axis] <= boundsMax;
             float3 C = TransformPosition( data[2], Transform );
-            bool Cin = C[axis] > boundsMin && C[axis] < boundsMax;
+            bool Cin = C[axis] >= boundsMin && C[axis] <= boundsMax;
             if ( Ain && Bin && Cin ) {
                 // easy if the whole triangle is in the bin already
-                bounds.Grow( GetAABBMin() );
-                bounds.Grow( GetAABBMax() );
+                boundsInBin.Grow( GetAABBMin() );
+                boundsInBin.Grow( GetAABBMax() );
             } else {
                 // if not we have to check the intersection points between the edges and the splitplanes of the bin
-                if ( Ain != Bin ) intersectBoundary( bounds, A, B, boundsMin, boundsMax, axis );
-                if ( Ain != Cin ) intersectBoundary( bounds, A, C, boundsMin, boundsMax, axis );
-                if ( Bin != Cin ) intersectBoundary( bounds, B, C, boundsMin, boundsMax, axis );
+                // we only do so if both points are on opposite sides of the split planes or one of them is in and the other is outside of the bin
+                if ( Ain != Bin || onDifferentSides( A, B, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( A, B, boundsMin, boundsMax, axis ) );
+                if ( Ain != Cin || onDifferentSides( A, C, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( A, C, boundsMin, boundsMax, axis ) );
+                if ( Bin != Cin || onDifferentSides( B, C, boundsMin, boundsMax, axis ) ) boundsInBin.Grow( intersectBoundary( B, C, boundsMin, boundsMax, axis ) );
 
                 // also check any triangle points inside of the bin
-                if ( Ain ) bounds.Grow( A );
-                if ( Bin ) bounds.Grow( B );
-                if ( Cin ) bounds.Grow( C );
+                if ( Ain ) boundsInBin.Grow( A );
+                if ( Bin ) boundsInBin.Grow( B );
+                if ( Cin ) boundsInBin.Grow( C );
             }
         } else {
             printf( "Impossible primitive type given!\tarea\n" ); // maybe we should crash here...
-            return false;
         }
 
-        return true;
+        return boundsInBin;
     }
 
     /**
@@ -653,9 +655,9 @@ public:
             float G = TransformPosition( float3( data[1].x, data[0].y, data[1].z ), Transform )[axis];
             float H = TransformPosition( float3( data[1].x, data[1].y, data[0].z ), Transform )[axis];
             // check if one point is inside the bin
-            if ( ( A > bMin && A < bMax ) || ( B > bMin && B < bMax ) || ( C > bMin && C < bMax ) || ( D > bMin && D < bMax ) || ( E > bMin && E < bMax ) || ( F > bMin && F < bMax ) || ( G > bMin && G < bMax ) || ( H > bMin && H < bMax ) ) return true;
+            if ( ( A >= bMin && A <= bMax ) || ( B >= bMin && B <= bMax ) || ( C >= bMin && C <= bMax ) || ( D >= bMin && D <= bMax ) || ( E >= bMin && E <= bMax ) || ( F >= bMin && F <= bMax ) || ( G >= bMin && G <= bMax ) || ( H >= bMin && H <= bMax ) ) return true;
             // if not, we check if not all points are on one side of the bin
-            return !( ( A < bMin && B < bMin && C < bMin && D < bMin && E < bMin && F < bMin && G < bMin && H < bMin ) || ( A > bMax && B > bMax && C > bMax && D > bMax && E > bMax && F > bMax && G > bMax && H > bMax ) );
+            return !( ( A <= bMin && B <= bMin && C <= bMin && D <= bMin && E <= bMin && F <= bMin && G <= bMin && H <= bMin ) || ( A >= bMax && B >= bMax && C >= bMax && D >= bMax && E >= bMax && F >= bMax && G >= bMax && H >= bMax ) );
         } else if ( type == QUAD ) {
             float size = data[0].x;
             // all the outer points
@@ -664,18 +666,18 @@ public:
             float C = TransformPosition( float3(  size, 0, -size ), Transform )[axis];
             float D = TransformPosition( float3(  size, 0,  size ), Transform )[axis];
             // check if one point is inside the bin
-            if ( ( A > bMin && A < bMax ) || ( B > bMin && B < bMax ) || ( C > bMin && C < bMax ) || ( D > bMin && D < bMax ) ) return true;
+            if ( ( A >= bMin && A <= bMax ) || ( B >= bMin && B <= bMax ) || ( C >= bMin && C <= bMax ) || ( D >= bMin && D <= bMax ) ) return true;
             // if not, we check if not all points are on one side of the bin
-            return !( ( A < bMin && B < bMin && C < bMin && D < bMin ) || ( A > bMax && B > bMax && C > bMax && D > bMax ) );
+            return !( ( A <= bMin && B <= bMin && C <= bMin && D <= bMin ) || ( A >= bMax && B >= bMax && C >= bMax && D >= bMax ) );
         } else if ( type == TRIANGLE ) {
             // all the outer points
             float A = TransformPosition( data[0], Transform )[axis];
             float B = TransformPosition( data[1], Transform )[axis];
             float C = TransformPosition( data[2], Transform )[axis];
             // check if one point is inside the bin
-            if ( ( A > bMin && A < bMax ) || ( B > bMin && B < bMax ) || ( C > bMin && C < bMax ) ) return true;
+            if ( ( A >= bMin && A <= bMax ) || ( B >= bMin && B <= bMax ) || ( C >= bMin && C <= bMax ) ) return true;
             // if not, we check if not all points are on one side of the bin
-            return !( ( A < bMin && B < bMin && C < bMin ) || ( A > bMax && B > bMax && C > bMax ) );
+            return !( ( A <= bMin && B <= bMin && C <= bMin ) || ( A >= bMax && B >= bMax && C >= bMax ) );
         } else {
             printf( "Impossible primitive type given!\tarea\n" ); // maybe we should crash here...
             return false;
@@ -798,13 +800,21 @@ public:
         }
     }
 private:
-    void intersectBoundary( aabb& bounds, float3 p1, float3 p2, float bMin, float bMax, int axis ) {
+    aabb intersectBoundary( float3 p1, float3 p2, float bMin, float bMax, int axis ) {
+        aabb intersectionBounds;
+
         float3 p1to2 = p2 - p1;
         float rABAxis = 1.0f / p1to2[axis];
         float frMin = ( bMin - p1[axis] ) * rABAxis;
         float frMax = ( bMax - p1[axis] ) * rABAxis;
 
-        if ( frMin >= 0 && frMin <= 1 ) bounds.Grow( p1 + frMin * p1to2 );
-        if ( frMax >= 0 && frMax <= 1 ) bounds.Grow( p1 + frMax * p1to2 );
+        if ( frMin >= 0 && frMin <= 1 ) intersectionBounds.Grow( p1 + frMin * p1to2 );
+        if ( frMax >= 0 && frMax <= 1 ) intersectionBounds.Grow( p1 + frMax * p1to2 );
+
+        return intersectionBounds;
+    }
+
+    bool onDifferentSides( float3 p1, float3 p2, float bMin, float bMax, int axis ) {
+        return ( p1[axis] < bMin && p2[axis] > bMax ) || ( p2[axis] < bMin && p1[axis] > bMax );
     }
 };

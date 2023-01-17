@@ -59,9 +59,9 @@ namespace Tmpl8 {
             // -----------------------------------------------------------
             // Basic primitives for a simple scene
             // -----------------------------------------------------------
-            //primitives.push_back( Primitive::createQuad( primitiveCount, 2, lamp ) );
-            //primitives.push_back( Primitive::createSphere( primitiveCount, float3( 0 ), 0.5f, earth ) );
-            //primitives.push_back( Primitive::createCube( primitiveCount, float3( 0.0f ), float3( 1.15f ), diamond ) );
+            primitives.push_back( Primitive::createQuad( primitiveCount, 2, lamp ) );
+            primitives.push_back( Primitive::createSphere( primitiveCount, float3( 0 ), 0.5f, earth ) );
+            primitives.push_back( Primitive::createCube( primitiveCount, float3( 0.0f ), float3( 1.15f ), diamond ) );
             primitives.push_back( Primitive::createQuad( primitiveCount, 50, checkerboard, mat4::Translate( float3( 0.0f, -1.0f, 0.0f ) ) ) );
 
             // -----------------------------------------------------------
@@ -94,7 +94,7 @@ namespace Tmpl8 {
             // -----------------------------------------------------------
             // lil shiba doggy - 76000 Vertices, 5000 Polygons
             // -----------------------------------------------------------
-            mat4 ShibaTransform = mat4::Translate( float3( 0.0f, -0.9f, 2.0f ) ) * mat4::RotateY( PI ) * mat4::Scale( 5.0f );
+            mat4 ShibaTransform = mat4::Translate( float3( 0.0f, -0.9f, -2.0f ) ) * mat4::RotateY( PI ) * mat4::Scale( 5.0f );
             //LoadModel( "assets/Shiba.obj", primitiveCount, new Diffuse( float3( 0.25f, 0.95f, 0.95f ) ), ShibaTransform );
             SetTime( 0 );
 
@@ -123,17 +123,15 @@ namespace Tmpl8 {
 #endif
             printf( "Finished BVH!\n" );
 
-#ifdef BVH_ANALYSIS
             printf( "%d nodes for %d primitives.\n", nodesUsed - 1, primitiveCount );
-            float totalArea = 0.0f;
-            for ( int i = 0; i < nodesUsed; i++ ) {
-                aabb nodeBox( bvhNode[i].aabbMin, bvhNode[i].aabbMax );
+            aabb nodeBox( bvhNode[rootNodeIdx].aabbMin, bvhNode[rootNodeIdx].aabbMax );
+            float totalArea = nodeBox.Area();
+            for ( int i = 2; i < nodesUsed; i++ ) {
+                nodeBox = aabb( bvhNode[i].aabbMin, bvhNode[i].aabbMax );
                 totalArea += nodeBox.Area();
-                if ( i == 0 ) i++;
             }
 
             printf( "Found area of %f\nTree depth: %d\n", totalArea, maxDepthBVH( rootNodeIdx ) );
-#endif
         }
 
         int maxDepthBVH( uint nodeIdx ) {
@@ -571,11 +569,15 @@ namespace Tmpl8 {
             // current node becomes a non-leaf
             node.leftFirst = leftChildIdx;
             node.primitiveCount = 0;
-            // update bounds and subdivide children
+            // update bounds
             bvhNode[leftChildIdx].aabbMax = float3( split.left.bmax3 );
             bvhNode[leftChildIdx].aabbMin = float3( split.left.bmin3 );
             bvhNode[rightChildIdx].aabbMax = float3( split.right.bmax3 );
             bvhNode[rightChildIdx].aabbMin = float3( split.right.bmin3 );
+            // set primitives
+            primitiveMap[leftChildIdx] = vector<uint>( split.leftChildren );
+            primitiveMap[rightChildIdx] = vector<uint>( split.rightChildren );
+
             Subdivide( leftChildIdx );
             Subdivide( rightChildIdx );
         }
@@ -590,7 +592,7 @@ namespace Tmpl8 {
             aabb rootAABB( root.aabbMin, root.aabbMax );
             float rootArea = rootAABB.Area();
 
-            if ( ( intersectionCost / rootArea ) < SPATIAL_SPLIT_ALPHA ) {
+            if ( ( intersectionCost / rootArea ) > SPATIAL_SPLIT_ALPHA ) {
                 findBestSpatialSplit( node, split, splitCost );
             }
 
@@ -633,8 +635,8 @@ namespace Tmpl8 {
                 // gather data for the 7 planes between the 8 bins
                 aabb leftBoxes[BIN_COUNT - 1];
                 aabb rightBoxes[BIN_COUNT - 1];
-                vector<int> leftPrimitives[BIN_COUNT - 1];
-                vector<int> rightPrimitives[BIN_COUNT - 1];
+                vector<uint> leftPrimitives[BIN_COUNT - 1];
+                vector<uint> rightPrimitives[BIN_COUNT - 1];
                 for ( int i = 0; i < BIN_COUNT - 1; i++ ) {
                     for ( int l = 0; l <= i; l++ ) {
                         leftBoxes[i].Grow( bin[l].bounds );
@@ -655,8 +657,8 @@ namespace Tmpl8 {
                     if ( planeCost < bestCost ) {
                         split.left = aabb( leftBoxes[i] );
                         split.right = aabb( leftBoxes[i] );
-                        split.leftChildren = vector<int>( leftPrimitives[i] );
-                        split.rightChildren = vector<int>( rightPrimitives[i] );
+                        split.leftChildren = vector<uint>( leftPrimitives[i] );
+                        split.rightChildren = vector<uint>( rightPrimitives[i] );
                         bestCost = planeCost;
                     }
                 }
@@ -665,6 +667,9 @@ namespace Tmpl8 {
             return bestCost;
         }
 
+        /**
+        * Method for finding the best spatial split
+        **/
         float findBestSpatialSplit( BVHNode& node, BVHSplit& split, float objectSplitCost ) {
             float bestCost = objectSplitCost;
 
@@ -674,35 +679,38 @@ namespace Tmpl8 {
 
                 if ( boundsMin == boundsMax ) continue;
 
-                // populate the bins
+                // do chopped binning
                 BVHBin bin[BIN_COUNT];
-                float scale = BIN_COUNT / ( boundsMax - boundsMin );
+                float scale = ( boundsMax - boundsMin ) / (float) BIN_COUNT;
                 set<int> binPrimitives[BIN_COUNT];
                 for ( int binIdx = 0; binIdx < BIN_COUNT; binIdx++ ) {
-                    for ( uint i = 0; i < node.primitiveCount; i++ ) {
-                        int objIdx = primitiveMap[node.leftFirst][i];
+                    for ( int objIdx : primitiveMap[node.leftFirst] ) {
                         Primitive primitive = primitives[objIdx];
 
                         float bMin = boundsMin + binIdx * scale;
-                        if ( primitive.fitInBin( bin[binIdx].bounds, bMin, bMin + scale, a ) ) {
-                            binPrimitives[i].insert(objIdx);
+                        bool inPreviousBin = binIdx > 0;
+                        if ( inPreviousBin ) inPreviousBin = inPreviousBin && ( binPrimitives[binIdx - 1].count( objIdx ) != 0 );
 
-                            if ( i == 0 || ( i > 0 && binPrimitives[i - 1].count( objIdx ) == 0 ) ) bin[binIdx].entry++;
-                        } else if ( i > 0 && binPrimitives[i - 1].count( objIdx ) == 0 ) {
-                            bin[binIdx].exit++;
+                        if ( primitive.isInBin( bMin, bMin + scale, a ) ) {
+                            binPrimitives[binIdx].insert(objIdx);
+                            bin[binIdx].bounds.Grow( primitive.fitInBin( bMin, bMin + scale, a) );
+
+                            if ( binIdx == 0 || !inPreviousBin ) bin[binIdx].entry++;
+                        } else if ( inPreviousBin ) {
+                            bin[binIdx - 1].exit++;
                         }
                     }
 
                     if ( binIdx == BIN_COUNT - 1 ) {
-                        bin[binIdx].exit += binPrimitives[BIN_COUNT - 1].size();
+                        bin[binIdx].exit += binPrimitives[binIdx].size();
                     }
                 }
 
                 // gather data for the planes between the bins
                 aabb leftBoxes[BIN_COUNT - 1];
                 aabb rightBoxes[BIN_COUNT - 1];
-                set<int> leftPrimitives[BIN_COUNT - 1];
-                set<int> rightPrimitives[BIN_COUNT - 1];
+                set<uint> leftPrimitives[BIN_COUNT - 1];
+                set<uint> rightPrimitives[BIN_COUNT - 1];
                 for ( int i = 0; i < BIN_COUNT - 1; i++ ) {
                     for ( int l = 0; l <= i; l++ ) {
                         leftBoxes[i].Grow( bin[l].bounds );
@@ -721,18 +729,17 @@ namespace Tmpl8 {
                     float planeCost = leftPrimitives[i].size() * leftBoxes[i].Area() + rightPrimitives[i].size() * rightBoxes[i].Area();
 
                     if ( planeCost < bestCost ) {
-                        printf("\t\t\tFound better spatial split!\n");
                         split.left = aabb( leftBoxes[i] );
                         split.right = aabb( leftBoxes[i] );
-                        split.leftChildren = vector<int>( leftPrimitives[i].begin(), leftPrimitives[i].end() );
-                        split.rightChildren = vector<int>( rightPrimitives[i].begin(), rightPrimitives[i].end() );
+                        split.leftChildren = vector<uint>( leftPrimitives[i].begin(), leftPrimitives[i].end() );
+                        split.rightChildren = vector<uint>( rightPrimitives[i].begin(), rightPrimitives[i].end() );
                         bestCost = planeCost;
                     }
                 }
             }
 
             // TODO: try unfitting!
-
+            if ( bestCost < objectSplitCost ) printf( "A better spatial split was found\n" );
             return bestCost;
         }
 #else

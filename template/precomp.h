@@ -1661,8 +1661,9 @@ public:
 
 //#define BVH_ANALYSIS
 
-//#define SPATIAL_SPLITS
+#define SPATIAL_SPLITS
 #define SPATIAL_SPLIT_ALPHA 0.00001f
+//#define SPATIAL_SPLIT_ALPHA 0.0f
 
 #include <unordered_map>
 
