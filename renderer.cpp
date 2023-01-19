@@ -296,10 +296,8 @@ void Renderer::Tick( float deltaTime ) {
             // translate accumulator contents to rgb32 pixels
 #ifdef BVH_ANALYSIS
             accumulator[accIdx] /= maxDepth;
-            screen->pixels[accIdx] = RGBF32_to_RGB8( &accumulator[accIdx] );
-#else
-            screen->pixels[accIdx] = RGBF32_to_RGB8( &accumulator[accIdx] );
 #endif
+            screen->pixels[accIdx] = RGBF32_to_RGB8( &accumulator[accIdx] );
             totalEnergy += accumulator[accIdx].x + accumulator[accIdx].y + accumulator[accIdx].z;
         }
     }

@@ -469,10 +469,10 @@ public:
 
     /**
     * Test if the primitive is inside a bin and adjust the current aabb of that bin if it is
+    * !!! This assumes that the value of isInBin with the same parameters returned true !!!
     **/
     aabb fitInBin( float boundsMin, float boundsMax, int axis ) {
         aabb boundsInBin;
-        // TODO: broken for quads
 
         if ( type == SPHERE ) {
             float3 centroid = GetCentroid();
