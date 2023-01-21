@@ -59,10 +59,13 @@ namespace Tmpl8 {
             // -----------------------------------------------------------
             // Basic primitives for a simple scene
             // -----------------------------------------------------------
-            primitives.push_back( Primitive::createQuad( primitiveCount, 2, lamp ) );
-            primitives.push_back( Primitive::createSphere( primitiveCount, float3( 0 ), 0.5f, earth ) );
-            primitives.push_back( Primitive::createCube( primitiveCount, float3( 0.0f ), float3( 1.15f ), diamond ) );
-            primitives.push_back( Primitive::createQuad( primitiveCount, 50, checkerboard, mat4::Translate( float3( 0.0f, -1.0f, 0.0f ) ) ) );
+            //primitives.push_back( Primitive::createQuad( primitiveCount, 2, lamp ) );
+            //primitives.push_back( Primitive::createSphere( primitiveCount, float3( 0 ), 0.5f, earth ) );
+            //primitives.push_back( Primitive::createCube( primitiveCount, float3( 0.0f ), float3( 1.15f ), diamond ) );
+            //primitives.push_back( Primitive::createQuad( primitiveCount, 50, checkerboard, mat4::Translate( float3( 0.0f, -1.0f, 0.0f ) ) ) );
+            // Following two triangles show the difference in SBVH and BVH very clearly
+            //primitives.push_back( Primitive::createTriangle( primitiveCount, float3( -5, 2, 2 ), float3( -3, 0, 2 ), float3( 3, 8, 2 ), red ) );
+            //primitives.push_back( Primitive::createTriangle( primitiveCount, float3( 5, 6, 2 ), float3( -3, 0, 2 ), float3( 3, 8, 2 ), blue ) );
 
             // -----------------------------------------------------------
             // mirror tetrahedron
@@ -71,38 +74,38 @@ namespace Tmpl8 {
                 mat4::Translate( float3( -3.0f, 0.5f, 0.5f ) ) * 
                 mat4::RotateX( 1.5 * PI ) * mat4::RotateY( 0.75 * PI ) * mat4::RotateZ( 0.25 * PI ) * 
                 mat4::Scale( 0.0075f );
-            LoadModel( "assets/tetrahedron.obj", primitiveCount, mirror, tetTransform );
+            //LoadModel( "assets/tetrahedron.obj", primitiveCount, mirror, tetTransform );
 
             // -----------------------------------------------------------
             // rainbow of teapots
             // -----------------------------------------------------------
             mat4 teapotTransform = mat4::Translate( float3( -4.5f, 0.5f, 5.0f ) );
-            LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 0.58f, 0.00f, 0.83f ) ), teapotTransform );
+            //LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 0.58f, 0.00f, 0.83f ) ), teapotTransform );
             teapotTransform = mat4::Translate( float3( -3.0f, 0.5f, 5.0f ) );
-            LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 0.29f, 0.00f, 0.51f ) ), teapotTransform );
+            //LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 0.29f, 0.00f, 0.51f ) ), teapotTransform );
             teapotTransform = mat4::Translate( float3( -1.5f, 0.5f, 5.0f ) );
-            LoadModel( "assets/teapot.obj", primitiveCount, blue, teapotTransform );
+            //LoadModel( "assets/teapot.obj", primitiveCount, blue, teapotTransform );
             teapotTransform = mat4::Translate( float3(  0.0f, 0.5f, 5.0f ) );
-            LoadModel( "assets/teapot.obj", primitiveCount, green, teapotTransform );
+            //LoadModel( "assets/teapot.obj", primitiveCount, green, teapotTransform );
             teapotTransform = mat4::Translate( float3( 1.5f, 0.5f, 5.0f ) );
-            LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 1.0f, 0.0f ) ), teapotTransform);
+            //LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 1.0f, 0.0f ) ), teapotTransform);
             teapotTransform = mat4::Translate( float3( 3.0f, 0.5f, 5.0f ) );
-            LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 0.5f, 0.0f ) ), teapotTransform );
+            //LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 0.5f, 0.0f ) ), teapotTransform );
             teapotTransform = mat4::Translate( float3( 4.5f, 0.5f, 5.0f ) );
-            LoadModel( "assets/teapot.obj", primitiveCount, red, teapotTransform );
+            //LoadModel( "assets/teapot.obj", primitiveCount, red, teapotTransform );
 
             // -----------------------------------------------------------
             // lil shiba doggy - 76000 Vertices, 5000 Polygons
             // -----------------------------------------------------------
             mat4 ShibaTransform = mat4::Translate( float3( 0.0f, -0.9f, 2.0f ) ) * mat4::RotateY( PI ) * mat4::Scale( 5.0f );
-            //LoadModel( "assets/Shiba.obj", primitiveCount, new Diffuse( float3( 0.25f, 0.95f, 0.95f ) ), ShibaTransform );
+            LoadModel( "assets/Shiba.obj", primitiveCount, new Diffuse( float3( 0.25f, 0.95f, 0.95f ) ), ShibaTransform );
 
             // -----------------------------------------------------------
             // and a stretching cat - 326641 vertices, 653278 polygons
             // -----------------------------------------------------------
-            mat4 CatTransform = mat4::Translate( float3( 4.0f, 0.3f, 1.0f ) ) * mat4::RotateY( 1.5f * PI );
+            mat4 CatTransform = mat4::Translate( float3( 0.0f, 0.3f, 2.0f ) ) * mat4::RotateY( 1.5f * PI );
             //LoadModel( "assets/CatStretching.obj", primitiveCount, new Dielectric( float3( 0.5f, 2.5f, 10.0f ), 1.52f ), CatTransform );
-            SetTime( 0 );
+            //SetTime( 0 );
 
             // build BVH after objects are moved with setTime
             printf("Building BVH...\n");
@@ -110,10 +113,13 @@ namespace Tmpl8 {
             vector<uint> indices;
             for ( uint i = 0; i < primitiveCount; i++ ) indices.push_back( i );
 
+            splits = 0;
             primitiveMap[rootNodeIdx] = indices;
             bvhNode = (BVHNode*) MALLOC64( ( 3 * primitiveCount ) * sizeof( BVHNode ) );
             BuildSBVH();
             BuildPrimitiveIndices();
+
+            printf( "spatial splits: %d\n", splits );
 #else
             primitiveIndices = (uint*) MALLOC64( primitiveCount * sizeof( uint ) );
             for ( uint i = 0; i < primitiveCount; i++ ) primitiveIndices[i] = i;
@@ -128,6 +134,8 @@ namespace Tmpl8 {
             float SAHcost = nodeBox.Area() * bvhNode[rootNodeIdx].primitiveCount;
             for ( int i = 2; i < nodesUsed; i++ ) {
                 BVHNode& node = bvhNode[i];
+                if ( !node.isLeaf() ) continue;
+
                 nodeBox = aabb( node.aabbMin, node.aabbMax );
                 SAHcost += nodeBox.Area() * node.primitiveCount;
             }
@@ -520,6 +528,10 @@ namespace Tmpl8 {
                 references += iterator->second.size();
             }
 
+            // measure the percentage of references to primtives
+            float primitiveReferencesPerc = 100.0f * ( (float) references ) / ( (float) primitiveCount );
+            printf( "References to primitives: %f\n", primitiveReferencesPerc );
+
             int insertPointer = 0;
             primitiveIndices = (uint*) MALLOC64( references * sizeof( uint ) );
             for ( auto iterator = primitiveMap.begin(); iterator != primitiveMap.end(); iterator++ ) {
@@ -567,8 +579,8 @@ namespace Tmpl8 {
             bvhNode[rightChildIdx].aabbMax = float3( split.right.bmax3 );
             bvhNode[rightChildIdx].aabbMin = float3( split.right.bmin3 );
             // set primitives
-            primitiveMap[leftChildIdx] = vector<uint>( split.leftChildren );
-            primitiveMap[rightChildIdx] = vector<uint>( split.rightChildren );
+            primitiveMap.insert( pair<uint, vector<uint>>( leftChildIdx, vector<uint>( split.leftChildren ) ) );
+            primitiveMap.insert( pair<uint, vector<uint>>( rightChildIdx, vector<uint>( split.rightChildren ) ) );
 
             Subdivide( leftChildIdx );
             Subdivide( rightChildIdx );
@@ -576,20 +588,37 @@ namespace Tmpl8 {
 
         float FindBestSplitPlane( BVHNode& node, BVHSplit& split ) {
             float splitCost = findBestObjectSplit( node, split );
-
-            // check if we want to do a spatial split attempt
-            float intersectionCost = split.intersectionArea();
-            if (isinf(intersectionCost)) intersectionCost = 0;
-
+            // area of the root
             BVHNode root = bvhNode[rootNodeIdx];
             aabb rootAABB( root.aabbMin, root.aabbMax );
             float rootArea = rootAABB.Area();
-
-            if ( ( intersectionCost / rootArea ) > SPATIAL_SPLIT_ALPHA ) {
+            // overlapping area of the split
+            float intersectionArea;
+            bool splitHasIntersection = CalculateAABBIntersectionArea( split.left, split.right, intersectionArea );
+            // check if we want to do a spatial split attempt
+            if ( splitHasIntersection && ( intersectionArea / rootArea ) > SPATIAL_SPLIT_ALPHA ) {
                 findBestSpatialSplit( node, split, splitCost );
             }
 
             return splitCost;
+        }
+
+        bool CalculateAABBIntersectionArea( aabb box1, aabb box2, float& area ) {
+            // minimum points
+            float3 min1 = box1.bmin3;
+            float3 min2 = box2.bmin3;
+            // maximum points
+            float3 max1 = box1.bmax3;
+            float3 max2 = box2.bmax3;
+            // check for overlaps
+            bool xOverlap = ( min1.x <= min2.x && min2.x <= max1.x ) || ( min1.x <= max2.x && max2.x <= max1.x ) || ( min2.x <= min1.x && min1.x <= max2.x ) || ( min2.x <= max1.x && max1.x <= max2.x );
+            bool yOverlap = ( min1.y <= min2.y && min2.y <= max1.y ) || ( min1.y <= max2.y && max2.y <= max1.y ) || ( min2.y <= min1.y && min1.y <= max2.y ) || ( min2.y <= max1.y && max1.y <= max2.y );
+            bool zOverlap = ( min1.z <= min2.z && min2.z <= max1.z ) || ( min1.z <= max2.z && max2.z <= max1.z ) || ( min2.z <= min1.z && min1.z <= max2.z ) || ( min2.z <= max1.z && max1.z <= max2.z );
+            // if no overlap, return false
+            if ( !xOverlap || !yOverlap || !zOverlap ) return false;
+
+            area = box1.Intersection( box2 ).Area();
+            return true;
         }
 
         /**
@@ -597,11 +626,12 @@ namespace Tmpl8 {
         * This is basically the normal BVH FindBestSplitPlane with modifications to take the tight AABBs from the spatial splits into account.
         **/
         float findBestObjectSplit( BVHNode& node, BVHSplit& split ) {
+            int axis = 0;
+            float splitPos = 1e30f;
             float bestCost = 1e30f;
             for ( int a = 0; a < 3; a++ ) {
                 float boundsMin = 1e30f;
                 float boundsMax = -1e30f;
-
                 for ( int objIdx : primitiveMap[node.leftFirst] ) {
                     Primitive primitive = primitives[objIdx];
                     boundsMin = min( boundsMin, primitive.GetCentroid()[a] );
@@ -613,46 +643,61 @@ namespace Tmpl8 {
                 // populate the bins
                 BVHBin bin[BIN_COUNT];
                 float scale = BIN_COUNT / ( boundsMax - boundsMin );
-                vector<int> binPrimitives[BIN_COUNT];
                 for ( int objIdx : primitiveMap[node.leftFirst] ) {
                     Primitive primitive = primitives[objIdx];
                     int binIdx = min( BIN_COUNT - 1, (int) ( ( primitive.GetCentroid()[a] - boundsMin ) * scale ) );
 
-                    binPrimitives[binIdx].push_back( objIdx );
-
                     bin[binIdx].primitiveCount++;
-                    bin[binIdx].bounds.Grow( primitive.GetAABBMin() );
-                    bin[binIdx].bounds.Grow( primitive.GetAABBMax() );
+                    bin[binIdx].bounds.Grow( fmaxf( primitive.GetAABBMin(), node.aabbMin ) );
+                    bin[binIdx].bounds.Grow( fminf( primitive.GetAABBMax(), node.aabbMax ) );
                 }
 
                 // gather data for the 7 planes between the 8 bins
-                aabb leftBoxes[BIN_COUNT - 1];
-                aabb rightBoxes[BIN_COUNT - 1];
-                vector<uint> leftPrimitives[BIN_COUNT - 1];
-                vector<uint> rightPrimitives[BIN_COUNT - 1];
+                float leftArea[BIN_COUNT - 1];
+                float rightArea[BIN_COUNT - 1];
+                int leftCount[BIN_COUNT - 1];
+                int rightCount[BIN_COUNT - 1];
+                aabb leftBox;
+                aabb rightBox;
+                int leftSum = 0;
+                int rightSum = 0;
                 for ( int i = 0; i < BIN_COUNT - 1; i++ ) {
-                    for ( int l = 0; l <= i; l++ ) {
-                        leftBoxes[i].Grow( bin[l].bounds );
-                        leftPrimitives[i].insert( leftPrimitives[i].end(), binPrimitives[l].begin(), binPrimitives[l].end() );
-                    }
+                    leftSum += bin[i].primitiveCount;
+                    leftCount[i] = leftSum;
+                    leftBox.Grow( bin[i].bounds );
+                    leftArea[i] = leftBox.Area();
 
-                    for ( int r = i + 1; r < BIN_COUNT; r++ ) {
-                        rightBoxes[i].Grow( bin[r].bounds );
-                        rightPrimitives[i].insert( rightPrimitives[i].end(), binPrimitives[r].begin(), binPrimitives[r].end() );
-                    }
+                    rightSum += bin[BIN_COUNT - 1 - i].primitiveCount;
+                    rightCount[BIN_COUNT - 2 - i] = rightSum;
+                    rightBox.Grow( bin[BIN_COUNT - 1 - i].bounds );
+                    rightArea[BIN_COUNT - 2 - i] = rightBox.Area();
                 }
 
-                // calculate SAH cost for the planes
+                // calculate SAH cost for the 7 planes
+                scale = ( boundsMax - boundsMin ) / BIN_COUNT;
                 for ( int i = 0; i < BIN_COUNT - 1; i++ ) {
-                    float planeCost = leftPrimitives[i].size() * leftBoxes[i].Area() + rightPrimitives[i].size() * rightBoxes[i].Area();
+                    float planeCost = leftCount[i] * leftArea[i] + rightCount[i] * rightArea[i];
 
                     if ( planeCost < bestCost ) {
-                        split.left = aabb( leftBoxes[i] );
-                        split.right = aabb( rightBoxes[i] );
-                        split.leftChildren = vector<uint>( leftPrimitives[i] );
-                        split.rightChildren = vector<uint>( rightPrimitives[i] );
+                        axis = a;
+                        splitPos = boundsMin + scale * ( i + 1 );
                         bestCost = planeCost;
                     }
+                }
+            }
+
+            // make the split
+            for ( int objIdx : primitiveMap[node.leftFirst] ) {
+                Primitive primitive = primitives[objIdx];
+
+                if ( primitive.GetCentroid()[axis] < splitPos ) {
+                    split.leftChildren.push_back( objIdx );
+                    split.left.Grow( primitive.GetAABBMin() );
+                    split.left.Grow( primitive.GetAABBMax() );
+                } else {
+                    split.rightChildren.push_back( objIdx );
+                    split.right.Grow( primitive.GetAABBMin() );
+                    split.right.Grow( primitive.GetAABBMax() );
                 }
             }
 
@@ -732,7 +777,14 @@ namespace Tmpl8 {
             }
 
             // TODO: try unfitting!
-            if ( bestCost < objectSplitCost ) printf( "A better spatial split was found\n" );
+            if ( bestCost < objectSplitCost && ( split.leftChildren.size() > 0 && split.rightChildren.size() > 0 ) ) {
+                // check the number of spatial splits
+                vector<uint> intersection;
+                set_intersection( split.leftChildren.begin(), split.leftChildren.end(), split.rightChildren.begin(), split.rightChildren.end(), back_inserter( intersection ) );
+
+                splits += intersection.size();
+            }
+
             return bestCost;
         }
 #else
@@ -877,6 +929,7 @@ namespace Tmpl8 {
         vector<Primitive> primitives;
 #ifdef SPATIAL_SPLITS
         unordered_map<uint, vector<uint>> primitiveMap;
+        int splits;
 #endif
         uint* primitiveIndices;
 
