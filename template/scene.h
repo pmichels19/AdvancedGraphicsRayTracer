@@ -59,7 +59,8 @@ namespace Tmpl8 {
             // -----------------------------------------------------------
             // Basic primitives for a simple scene
             // -----------------------------------------------------------
-            //primitives.push_back( Primitive::createQuad( primitiveCount, 2, lamp ) );
+            mat4 M1 = mat4::Translate( float3( 0, 2.6f, 2 ) ) * mat4::Translate( float3( 0, -0.9, 0 ) );
+            primitives.push_back( Primitive::createQuad( primitiveCount, 2, lamp, M1 ) );
             //primitives.push_back( Primitive::createSphere( primitiveCount, float3( 0 ), 0.5f, earth ) );
             //primitives.push_back( Primitive::createCube( primitiveCount, float3( 0.0f ), float3( 1.15f ), diamond ) );
             //primitives.push_back( Primitive::createQuad( primitiveCount, 50, checkerboard, mat4::Translate( float3( 0.0f, -1.0f, 0.0f ) ) ) );
@@ -84,11 +85,11 @@ namespace Tmpl8 {
             teapotTransform = mat4::Translate( float3( -3.0f, 0.5f, 5.0f ) );
             //LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 0.29f, 0.00f, 0.51f ) ), teapotTransform );
             teapotTransform = mat4::Translate( float3( -1.5f, 0.5f, 5.0f ) );
-            //LoadModel( "assets/teapot.obj", primitiveCount, blue, teapotTransform );
+            LoadModel( "assets/teapot.obj", primitiveCount, blue, teapotTransform );
             teapotTransform = mat4::Translate( float3(  0.0f, 0.5f, 5.0f ) );
-            //LoadModel( "assets/teapot.obj", primitiveCount, green, teapotTransform );
+            LoadModel( "assets/teapot.obj", primitiveCount, green, teapotTransform );
             teapotTransform = mat4::Translate( float3( 1.5f, 0.5f, 5.0f ) );
-            //LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 1.0f, 0.0f ) ), teapotTransform);
+            LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 1.0f, 0.0f ) ), teapotTransform);
             teapotTransform = mat4::Translate( float3( 3.0f, 0.5f, 5.0f ) );
             //LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 0.5f, 0.0f ) ), teapotTransform );
             teapotTransform = mat4::Translate( float3( 4.5f, 0.5f, 5.0f ) );
@@ -98,7 +99,7 @@ namespace Tmpl8 {
             // lil shiba doggy - 76000 Vertices, 5000 Polygons
             // -----------------------------------------------------------
             mat4 ShibaTransform = mat4::Translate( float3( 0.0f, -0.9f, 2.0f ) ) * mat4::RotateY( PI ) * mat4::Scale( 5.0f );
-            LoadModel( "assets/Shiba.obj", primitiveCount, new Diffuse( float3( 0.25f, 0.95f, 0.95f ) ), ShibaTransform );
+            //LoadModel( "assets/Shiba.obj", primitiveCount, new Diffuse( float3( 0.25f, 0.95f, 0.95f ) ), ShibaTransform );
 
             // -----------------------------------------------------------
             // and a stretching cat - 326641 vertices, 653278 polygons
@@ -115,7 +116,7 @@ namespace Tmpl8 {
 
             splits = 0;
             primitiveMap[rootNodeIdx] = indices;
-            bvhNode = (BVHNode*) MALLOC64( ( 3 * primitiveCount ) * sizeof( BVHNode ) );
+            bvhNode = (BVHNode*) MALLOC64( ( 4 * primitiveCount ) * sizeof( BVHNode ) );
             BuildSBVH();
             BuildPrimitiveIndices();
 
@@ -146,7 +147,10 @@ namespace Tmpl8 {
 
         int maxDepthBVH( uint nodeIdx ) {
             BVHNode& node = bvhNode[nodeIdx];
-            if ( node.isLeaf() ) return 0;
+            if ( node.isLeaf() ) {
+                if ( nodeIdx == rootNodeIdx ) return 1;
+                else return 0;
+            }
 
             int lDepth = maxDepthBVH( node.leftFirst );
             int rDepth = maxDepthBVH( node.leftFirst + 1 );
@@ -214,10 +218,6 @@ namespace Tmpl8 {
             // default time for the scene is simply 0. Updating/ the time per frame 
             // enables animation. Updating it per ray can be used for motion blur.
             animTime = t;
-            // light source animation: swing
-            mat4 M1base = mat4::Translate( float3( 0, 2.6f, 2 ) );
-            mat4 M1 = M1base * mat4::RotateZ( sinf( animTime * 0.6f ) * 0.1f ) * mat4::Translate( float3( 0, -0.9, 0 ) );
-            primitives[0].UpdateTransform(  M1 );
             // sphere animation: bounce
             float tm = 1 - sqrf( fmodf( animTime, 2.0f ) - 1 );
             primitives[1].UpdateTransform( mat4::Translate( float3( -1.4f, -0.5f + tm, 2 ) ) );
@@ -280,9 +280,9 @@ namespace Tmpl8 {
                 }
             }
 
-            return float3( 0.0f, 0.0f, 0.25f * nodeTraversals / ( (float) bvhDepth ) ); // bvh depth visualization
+            //return float3( 0.0f, 0.25f * nodeTraversals / (float) bvhDepth, 0.0f ); // bvh depth visualization
             //return float3( intersections / (float) bvhDepth, 0.0f, 0.0f ); // number of intersections visualization
-            //return float3( intersections / (float) bvhDepth, 0.0f, 0.25f nodeTraversals / (float) bvhDepth ); // both
+            return float3( intersections / (float) bvhDepth, 0.25f * nodeTraversals / (float) bvhDepth, 0.0f ); // both
         }
 
         void IntersectBVH( Ray& ray ) {
@@ -717,8 +717,8 @@ namespace Tmpl8 {
         * Method for finding the best spatial split
         **/
         float findBestSpatialSplit( BVHNode& node, BVHSplit& split, float objectSplitCost ) {
+            int axis = 0;
             float bestCost = objectSplitCost;
-
             for ( int a = 0; a < 3; a++ ) {
                 float boundsMin = node.aabbMin[a];
                 float boundsMax = node.aabbMax[a];
@@ -780,21 +780,68 @@ namespace Tmpl8 {
                         split.right = aabb( rightBoxes[i] );
                         split.leftChildren = vector<uint>( leftPrimitives[i].begin(), leftPrimitives[i].end() );
                         split.rightChildren = vector<uint>( rightPrimitives[i].begin(), rightPrimitives[i].end() );
+                        axis = a;
                         bestCost = planeCost;
                     }
                 }
             }
 
-            // TODO: try unfitting!
-            if ( bestCost < objectSplitCost && ( split.leftChildren.size() > 0 && split.rightChildren.size() > 0 ) ) {
-                // check the number of spatial splits
-                vector<uint> intersection;
-                set_intersection( split.leftChildren.begin(), split.leftChildren.end(), split.rightChildren.begin(), split.rightChildren.end(), back_inserter( intersection ) );
+            // update the number of spatial splits
+            splits += split.splitPrimitives().size();
 
-                splits += intersection.size();
+#ifdef SBVH_UNSPLITTING
+            // try unsplitting some of the split primitives
+            if ( split.leftChildren.size() > 0 && split.rightChildren.size() > 0 ) {
+                float unsplitCost = unsplit( node, split, axis );
+
+                if ( unsplitCost < bestCost ) bestCost = unsplitCost;
             }
+#endif
 
             return bestCost;
+        }
+
+        float unsplit( BVHNode& node, BVHSplit& split, int axis ) {
+            // get min and maximum points of the split on the given axis
+            float bMin = split.left.bmin3[axis];
+            float bMax = split.right.bmax3[axis];
+
+            // get a list of all the split primitives
+            vector<uint> intersection = split.splitPrimitives();
+            // get the cost of the current, non-unsplit split
+            float currentCost = split.cost();
+            // loop over all the split objects
+            for ( uint objIdx : intersection ) {
+                // get the info on the primitive
+                Primitive primitive = primitives[objIdx];
+                aabb lPrimBox = primitive.fitInBin( bMin, fminf( bMax, primitive.GetAABBMax()[axis] ), axis );
+                aabb rPrimBox = primitive.fitInBin( fmaxf( bMin, primitive.GetAABBMin()[axis] ), bMax, axis );
+
+                // get the left and right box extended with the split primitive
+                aabb lExtended = aabb::Union( split.left, lPrimBox );
+                aabb rExtended = aabb::Union( split.right, rPrimBox );
+
+                // calculate the conservative estimates for unsplitting the primitive
+                float lCost = lExtended.Area() * split.leftChildren.size() + split.right.Area() * ( split.rightChildren.size() - 1 );
+                float rCost = split.left.Area() * ( split.leftChildren.size() - 1 ) + rExtended.Area() * split.rightChildren.size();
+
+                // nothing to do if unsplitting this primitive makes the SAH cost worse
+                if ( lCost > currentCost && rCost > currentCost ) continue;
+                // otherwise update the cost and adjust the appropriate boxes and children of the split
+                if ( lCost < rCost ) {
+                    currentCost = lCost;
+                    split.left = lExtended;
+                    split.rightChildren.erase( find( split.rightChildren.begin(), split.rightChildren.end(), objIdx ) );
+                } else {
+                    currentCost = rCost;
+                    split.right = rExtended;
+                    split.leftChildren.erase( find( split.leftChildren.begin(), split.leftChildren.end(), objIdx ) );
+                }
+
+                splits--;
+            }
+
+            return currentCost;
         }
 #else
         // -----------------------------------------------------------

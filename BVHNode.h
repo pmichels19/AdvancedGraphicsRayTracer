@@ -1,6 +1,6 @@
 #pragma once
 
-#define BIN_COUNT 8
+#define BIN_COUNT 32
 
 struct BVHNode {
     float3 aabbMin;
@@ -19,8 +19,14 @@ struct BVHSplit {
     vector<uint> leftChildren;
     vector<uint> rightChildren;
 
-    float intersectionArea() {
-        return left.Intersection(right).Area();
+    vector<uint> splitPrimitives() {
+        vector<uint> intersection;
+        set_intersection( leftChildren.begin(), leftChildren.end(), rightChildren.begin(), rightChildren.end(), back_inserter( intersection ) );
+        return intersection;
+    }
+
+    float cost() {
+        return leftChildren.size() * left.Area() + rightChildren.size() * right.Area();
     }
 };
 
