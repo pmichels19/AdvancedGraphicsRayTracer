@@ -140,7 +140,8 @@ namespace Tmpl8 {
                 SAHcost += nodeBox.Area() * node.primitiveCount;
             }
 
-            printf( "Found SAH cost of %f\nTree depth: %d\n", SAHcost, maxDepthBVH( rootNodeIdx ) );
+            bvhDepth = maxDepthBVH( rootNodeIdx );
+            printf( "Found SAH cost of %f\nTree depth: %d\n", SAHcost, bvhDepth );
         }
 
         int maxDepthBVH( uint nodeIdx ) {
@@ -244,18 +245,16 @@ namespace Tmpl8 {
             return float3( 0.0f, -1.0f, 0.0f );
         }
 
-        float BVHDepth( Ray& ray ) {
+        float3 BVHVisualization( Ray& ray ) {
             BVHNode* node = &bvhNode[rootNodeIdx];
             BVHNode* stack[64];
             uint stackPtr = 0;
             int nodeTraversals = 0;
+            int intersections = 0;
             while ( true ) {
                 nodeTraversals++;
                 if ( node->isLeaf() ) {
-                    for ( uint i = 0; i < node->primitiveCount; i++ ) {
-                        int objIdx = primitiveIndices[node->leftFirst + i];
-                        primitives[objIdx].Intersect( ray );
-                    }
+                    intersections++;
 
                     if ( stackPtr == 0 ) break;
 
@@ -265,24 +264,25 @@ namespace Tmpl8 {
 
                 BVHNode* child1 = &bvhNode[node->leftFirst];
                 BVHNode* child2 = &bvhNode[node->leftFirst + 1];
+                bool hits1 = HitsAABB( ray, child1->aabbMin, child1->aabbMax );
+                bool hits2 = HitsAABB( ray, child2->aabbMin, child2->aabbMax );
 
-                float dist1 = IntersectAABB( ray, child1->aabbMin, child1->aabbMax );
-                float dist2 = IntersectAABB( ray, child2->aabbMin, child2->aabbMax );
-                if ( dist1 > dist2 ) {
-                    swap( dist1, dist2 );
-                    swap( child1, child2 );
-                }
-
-                if ( dist1 == 1e30f ) {
-                    if ( stackPtr == 0 ) break;
-                    node = stack[--stackPtr];
-                } else {
+                if ( hits1 && hits2 ) {
                     node = child1;
-                    if ( dist2 != 1e30f ) stack[stackPtr++] = child2;
+                    stack[stackPtr++] = child2;
+                } else if ( !( hits1 || hits2 ) ) {
+                    if ( stackPtr == 0 ) break;
+                    else node = stack[--stackPtr];
+                } else if ( hits1 ) {
+                    node = child1;
+                } else {
+                    node = child2;
                 }
             }
 
-            return nodeTraversals;
+            return float3( 0.0f, 0.0f, 0.25f * nodeTraversals / ( (float) bvhDepth ) ); // bvh depth visualization
+            //return float3( intersections / (float) bvhDepth, 0.0f, 0.0f ); // number of intersections visualization
+            //return float3( intersections / (float) bvhDepth, 0.0f, 0.25f nodeTraversals / (float) bvhDepth ); // both
         }
 
         void IntersectBVH( Ray& ray ) {
@@ -627,8 +627,11 @@ namespace Tmpl8 {
         **/
         float findBestObjectSplit( BVHNode& node, BVHSplit& split ) {
             int axis = 0;
+
             float splitPos = 1e30f;
             float bestCost = 1e30f;
+
+            aabb nodeBox( node.aabbMin, node.aabbMax );
             for ( int a = 0; a < 3; a++ ) {
                 float boundsMin = 1e30f;
                 float boundsMax = -1e30f;
@@ -648,8 +651,8 @@ namespace Tmpl8 {
                     int binIdx = min( BIN_COUNT - 1, (int) ( ( primitive.GetCentroid()[a] - boundsMin ) * scale ) );
 
                     bin[binIdx].primitiveCount++;
-                    bin[binIdx].bounds.Grow( fmaxf( primitive.GetAABBMin(), node.aabbMin ) );
-                    bin[binIdx].bounds.Grow( fminf( primitive.GetAABBMax(), node.aabbMax ) );
+                    bin[binIdx].bounds.Grow( primitive.GetAABBMin() );
+                    bin[binIdx].bounds.Grow( primitive.GetAABBMax() );
                 }
 
                 // gather data for the 7 planes between the 8 bins
@@ -665,11 +668,13 @@ namespace Tmpl8 {
                     leftSum += bin[i].primitiveCount;
                     leftCount[i] = leftSum;
                     leftBox.Grow( bin[i].bounds );
+                    leftBox = leftBox.Intersection( nodeBox );
                     leftArea[i] = leftBox.Area();
 
                     rightSum += bin[BIN_COUNT - 1 - i].primitiveCount;
                     rightCount[BIN_COUNT - 2 - i] = rightSum;
                     rightBox.Grow( bin[BIN_COUNT - 1 - i].bounds );
+                    rightBox = rightBox.Intersection( nodeBox );
                     rightArea[BIN_COUNT - 2 - i] = rightBox.Area();
                 }
 
@@ -700,6 +705,10 @@ namespace Tmpl8 {
                     split.right.Grow( primitive.GetAABBMax() );
                 }
             }
+
+            // clip the resulting boxes against the parent node
+            split.left = split.left.Intersection( nodeBox );
+            split.right = split.right.Intersection( nodeBox );
 
             return bestCost;
         }
@@ -932,6 +941,8 @@ namespace Tmpl8 {
         int splits;
 #endif
         uint* primitiveIndices;
+
+        int bvhDepth;
 
         ObjectMaterial* red;
         ObjectMaterial* green;

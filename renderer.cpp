@@ -209,9 +209,6 @@ void Renderer::Tick( float deltaTime ) {
     // pixel loop
     Timer t;
     float totalEnergy = 0.0f;
-#ifdef BVH_ANALYSIS
-    float maxDepth = 0;
-#endif
     // lines are executed as OpenMP parallel tasks (disabled in DEBUG)
 #pragma omp parallel for schedule(dynamic)
 #if !PACKET_TRAVERSAL
@@ -225,8 +222,7 @@ void Renderer::Tick( float deltaTime ) {
                     for ( samples = 0; samples < 1; samples++ ) { // iterate to 1 to disable anti-aliasing, going higher will drastically impact performance
                         if ( animation ) scene.SetTime( animTime + Rand( deltaTime * 0.002f ) );
 #ifdef BVH_ANALYSIS
-                        result += DepthTrace( camera.GetPrimaryRay( x + u, y + v ) );
-                        if ( result.x > maxDepth ) maxDepth = result.x;
+                        result += scene.BVHVisualization( camera.GetPrimaryRay( x + u, y + v ) );
 #else
                         if ( useWhitted ) {
                             result += WhittedTrace( camera.GetPrimaryRay( x + u, y + v ) );
@@ -294,9 +290,6 @@ void Renderer::Tick( float deltaTime ) {
         for ( int x = 0; x < SCRWIDTH; x++ ) {
             int accIdx = x + y * SCRWIDTH;
             // translate accumulator contents to rgb32 pixels
-#ifdef BVH_ANALYSIS
-            accumulator[accIdx] /= maxDepth;
-#endif
             screen->pixels[accIdx] = RGBF32_to_RGB8( &accumulator[accIdx] );
             totalEnergy += accumulator[accIdx].x + accumulator[accIdx].y + accumulator[accIdx].z;
         }

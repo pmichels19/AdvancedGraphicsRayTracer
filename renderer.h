@@ -12,12 +12,6 @@ namespace Tmpl8 {
 
         float3 WhittedTrace( Ray& ray, int depth = 20 );
 
-        float3 DepthTrace( Ray& ray ) {
-            int steps = scene.BVHDepth( ray );
-            //printf("%d\n", steps );
-            return float3( steps, 1.0f, 0.0f );
-        }
-
         float3 skyColor( float3 D ) {
             uint u = skydome->width * atan2f( D.z, D.x ) * INV2PI - 0.5f;
             uint v = skydome->height * acosf( D.y ) * INVPI - 0.5f;
