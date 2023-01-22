@@ -59,8 +59,8 @@ namespace Tmpl8 {
             // -----------------------------------------------------------
             // Basic primitives for a simple scene
             // -----------------------------------------------------------
-            mat4 M1 = mat4::Translate( float3( 0, 2.6f, 2 ) ) * mat4::Translate( float3( 0, -0.9, 0 ) );
-            primitives.push_back( Primitive::createQuad( primitiveCount, 2, lamp, M1 ) );
+            //mat4 M1 = mat4::Translate( float3( 0.0f, 2.0f, 0.0f ) );
+            //primitives.push_back( Primitive::createQuad( primitiveCount, 2, lamp, M1 ) );
             //primitives.push_back( Primitive::createSphere( primitiveCount, float3( 0 ), 0.5f, earth ) );
             //primitives.push_back( Primitive::createCube( primitiveCount, float3( 0.0f ), float3( 1.15f ), diamond ) );
             //primitives.push_back( Primitive::createQuad( primitiveCount, 50, checkerboard, mat4::Translate( float3( 0.0f, -1.0f, 0.0f ) ) ) );
@@ -85,11 +85,11 @@ namespace Tmpl8 {
             teapotTransform = mat4::Translate( float3( -3.0f, 0.5f, 5.0f ) );
             //LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 0.29f, 0.00f, 0.51f ) ), teapotTransform );
             teapotTransform = mat4::Translate( float3( -1.5f, 0.5f, 5.0f ) );
-            LoadModel( "assets/teapot.obj", primitiveCount, blue, teapotTransform );
+            //LoadModel( "assets/teapot.obj", primitiveCount, blue, teapotTransform );
             teapotTransform = mat4::Translate( float3(  0.0f, 0.5f, 5.0f ) );
-            LoadModel( "assets/teapot.obj", primitiveCount, green, teapotTransform );
+            //LoadModel( "assets/teapot.obj", primitiveCount, green, teapotTransform );
             teapotTransform = mat4::Translate( float3( 1.5f, 0.5f, 5.0f ) );
-            LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 1.0f, 0.0f ) ), teapotTransform);
+            //LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 1.0f, 0.0f ) ), teapotTransform);
             teapotTransform = mat4::Translate( float3( 3.0f, 0.5f, 5.0f ) );
             //LoadModel( "assets/teapot.obj", primitiveCount, new Diffuse( float3( 1.0f, 0.5f, 0.0f ) ), teapotTransform );
             teapotTransform = mat4::Translate( float3( 4.5f, 0.5f, 5.0f ) );
@@ -100,6 +100,19 @@ namespace Tmpl8 {
             // -----------------------------------------------------------
             mat4 ShibaTransform = mat4::Translate( float3( 0.0f, -0.9f, 2.0f ) ) * mat4::RotateY( PI ) * mat4::Scale( 5.0f );
             //LoadModel( "assets/Shiba.obj", primitiveCount, new Diffuse( float3( 0.25f, 0.95f, 0.95f ) ), ShibaTransform );
+
+
+            // -----------------------------------------------------------
+            // US Airways 727 model, the wings greatly highlight the difference between the SBVH and BVH
+            // -----------------------------------------------------------
+            mat4 planeScale = mat4::Scale( 0.005f );
+            mat4 planeTransform = mat4::RotateY( 0.5f * PI ) * mat4::Translate( float3( 6.0f, -2.0f, 0.0f ) ) * planeScale;
+            LoadModel( "assets/airways.obj", primitiveCount, new Mirror( float3( 0.7f, 0.7f, 0.7f ) ), planeTransform );
+            int planeCount = 8;
+            for ( int i = 0; i < planeCount; i++ ) {
+                planeTransform = mat4::RotateY( ( (float) i ) * ( 2.0f / (float) planeCount ) * PI ) * mat4::Translate( float3( -8.0f, -2.0f, 0.0f ) ) * planeScale;
+                LoadModel( "assets/airways.obj", primitiveCount, new Diffuse( float3( ( i % 4 ) == 1 ? 0.9f : 0.1f, ( i % 4 ) == 2 ? 0.9f : 0.1f, ( i % 4 ) == 3 ? 0.9f : 0.1f ) ), planeTransform );
+            }
 
             // -----------------------------------------------------------
             // and a stretching cat - 326641 vertices, 653278 polygons
@@ -119,8 +132,6 @@ namespace Tmpl8 {
             bvhNode = (BVHNode*) MALLOC64( ( 4 * primitiveCount ) * sizeof( BVHNode ) );
             BuildSBVH();
             BuildPrimitiveIndices();
-
-            printf( "spatial splits: %d\n", splits );
 #else
             primitiveIndices = (uint*) MALLOC64( primitiveCount * sizeof( uint ) );
             for ( uint i = 0; i < primitiveCount; i++ ) primitiveIndices[i] = i;
@@ -131,18 +142,27 @@ namespace Tmpl8 {
             printf( "Finished BVH!\n" );
 
             printf( "%d nodes for %d primitives.\n", nodesUsed - 1, primitiveCount );
+            printf( "Found SAH cost of %f\n", SAHCost() );
+            bvhDepth = maxDepthBVH( rootNodeIdx );
+            printf( "Tree depth: %d\n", bvhDepth );
+            printf( "Overlapping area: %f\n", overlap );
+#ifdef SPATIAL_SPLITS
+            printf( "spatial splits: %d\n", splits );
+#endif
+        }
+
+        float SAHCost() {
             aabb nodeBox( bvhNode[rootNodeIdx].aabbMin, bvhNode[rootNodeIdx].aabbMax );
-            float SAHcost = nodeBox.Area() * bvhNode[rootNodeIdx].primitiveCount;
+            float cost = nodeBox.Area() * bvhNode[rootNodeIdx].primitiveCount;
             for ( int i = 2; i < nodesUsed; i++ ) {
                 BVHNode& node = bvhNode[i];
                 if ( !node.isLeaf() ) continue;
 
                 nodeBox = aabb( node.aabbMin, node.aabbMax );
-                SAHcost += nodeBox.Area() * node.primitiveCount;
+                cost += nodeBox.Area() * node.primitiveCount;
             }
 
-            bvhDepth = maxDepthBVH( rootNodeIdx );
-            printf( "Found SAH cost of %f\nTree depth: %d\n", SAHcost, bvhDepth );
+            return cost;
         }
 
         int maxDepthBVH( uint nodeIdx ) {
@@ -280,9 +300,9 @@ namespace Tmpl8 {
                 }
             }
 
-            //return float3( 0.0f, 0.25f * nodeTraversals / (float) bvhDepth, 0.0f ); // bvh depth visualization
+            return float3( 0.0f, 0.25f * nodeTraversals / (float) bvhDepth, 0.0f ); // bvh depth visualization
             //return float3( intersections / (float) bvhDepth, 0.0f, 0.0f ); // number of intersections visualization
-            return float3( intersections / (float) bvhDepth, 0.25f * nodeTraversals / (float) bvhDepth, 0.0f ); // both
+            //return float3( intersections / (float) bvhDepth, 0.25f * nodeTraversals / (float) bvhDepth, 0.0f ); // both
         }
 
         void IntersectBVH( Ray& ray ) {
@@ -499,6 +519,24 @@ namespace Tmpl8 {
             return N;
         }
 
+        // The aabb's standard intersection method doesn't check if the two boxes actually intersect, so we do that manually
+        float CalculateAABBIntersectionArea( aabb box1, aabb box2 ) {
+            // minimum points
+            float3 min1 = box1.bmin3;
+            float3 min2 = box2.bmin3;
+            // maximum points
+            float3 max1 = box1.bmax3;
+            float3 max2 = box2.bmax3;
+            // check for overlaps
+            bool xOverlap = ( min1.x <= min2.x && min2.x <= max1.x ) || ( min1.x <= max2.x && max2.x <= max1.x ) || ( min2.x <= min1.x && min1.x <= max2.x ) || ( min2.x <= max1.x && max1.x <= max2.x );
+            bool yOverlap = ( min1.y <= min2.y && min2.y <= max1.y ) || ( min1.y <= max2.y && max2.y <= max1.y ) || ( min2.y <= min1.y && min1.y <= max2.y ) || ( min2.y <= max1.y && max1.y <= max2.y );
+            bool zOverlap = ( min1.z <= min2.z && min2.z <= max1.z ) || ( min1.z <= max2.z && max2.z <= max1.z ) || ( min2.z <= min1.z && min1.z <= max2.z ) || ( min2.z <= max1.z && max1.z <= max2.z );
+            // if no overlap, return false
+            if ( !xOverlap || !yOverlap || !zOverlap ) return 0.0f;
+
+            return box1.Intersection( box2 ).Area();
+        }
+
 #ifdef SPATIAL_SPLITS
         // -----------------------------------------------------------
         // SBVH functions
@@ -560,6 +598,11 @@ namespace Tmpl8 {
             // abort split if one of the sides is empty
             if ( leftCount == 0 || rightCount == 0 ) return;
 
+            // update the total overlapping area
+            overlap += CalculateAABBIntersectionArea( split.left, split.right );
+            // update the number of spatial splits
+            splits += split.splitPrimitives().size();
+
             // create child nodes
             int leftChildIdx = nodesUsed++;
             int rightChildIdx = nodesUsed++;
@@ -593,32 +636,13 @@ namespace Tmpl8 {
             aabb rootAABB( root.aabbMin, root.aabbMax );
             float rootArea = rootAABB.Area();
             // overlapping area of the split
-            float intersectionArea;
-            bool splitHasIntersection = CalculateAABBIntersectionArea( split.left, split.right, intersectionArea );
+            float intersectionArea = CalculateAABBIntersectionArea( split.left, split.right );
             // check if we want to do a spatial split attempt
-            if ( splitHasIntersection && ( intersectionArea / rootArea ) > SPATIAL_SPLIT_ALPHA ) {
+            if ( ( intersectionArea / rootArea ) > SPATIAL_SPLIT_ALPHA ) {
                 findBestSpatialSplit( node, split, splitCost );
             }
 
             return splitCost;
-        }
-
-        bool CalculateAABBIntersectionArea( aabb box1, aabb box2, float& area ) {
-            // minimum points
-            float3 min1 = box1.bmin3;
-            float3 min2 = box2.bmin3;
-            // maximum points
-            float3 max1 = box1.bmax3;
-            float3 max2 = box2.bmax3;
-            // check for overlaps
-            bool xOverlap = ( min1.x <= min2.x && min2.x <= max1.x ) || ( min1.x <= max2.x && max2.x <= max1.x ) || ( min2.x <= min1.x && min1.x <= max2.x ) || ( min2.x <= max1.x && max1.x <= max2.x );
-            bool yOverlap = ( min1.y <= min2.y && min2.y <= max1.y ) || ( min1.y <= max2.y && max2.y <= max1.y ) || ( min2.y <= min1.y && min1.y <= max2.y ) || ( min2.y <= max1.y && max1.y <= max2.y );
-            bool zOverlap = ( min1.z <= min2.z && min2.z <= max1.z ) || ( min1.z <= max2.z && max2.z <= max1.z ) || ( min2.z <= min1.z && min1.z <= max2.z ) || ( min2.z <= max1.z && max1.z <= max2.z );
-            // if no overlap, return false
-            if ( !xOverlap || !yOverlap || !zOverlap ) return false;
-
-            area = box1.Intersection( box2 ).Area();
-            return true;
         }
 
         /**
@@ -786,9 +810,6 @@ namespace Tmpl8 {
                 }
             }
 
-            // update the number of spatial splits
-            splits += split.splitPrimitives().size();
-
 #ifdef SBVH_UNSPLITTING
             // try unsplitting some of the split primitives
             if ( split.leftChildren.size() > 0 && split.rightChildren.size() > 0 ) {
@@ -837,8 +858,6 @@ namespace Tmpl8 {
                     split.right = rExtended;
                     split.leftChildren.erase( find( split.leftChildren.begin(), split.leftChildren.end(), objIdx ) );
                 }
-
-                splits--;
             }
 
             return currentCost;
@@ -906,9 +925,12 @@ namespace Tmpl8 {
             // current node becomes a non-leaf
             node.leftFirst = leftChildIdx;
             node.primitiveCount = 0;
-            // update bounds and subdivide children
+            // update bounds
             UpdateNodeBounds( leftChildIdx );
             UpdateNodeBounds( rightChildIdx );
+            // update the total overlapping area
+            overlap += CalculateAABBIntersectionArea( aabb( bvhNode[leftChildIdx].aabbMin, bvhNode[leftChildIdx].aabbMax ), aabb( bvhNode[rightChildIdx].aabbMin, bvhNode[rightChildIdx].aabbMax ) );
+            // subdivide children
             Subdivide( leftChildIdx );
             Subdivide( rightChildIdx );
         }
@@ -983,13 +1005,15 @@ namespace Tmpl8 {
             float animTime = 0;
 
         vector<Primitive> primitives;
+        uint* primitiveIndices;
+
 #ifdef SPATIAL_SPLITS
         unordered_map<uint, vector<uint>> primitiveMap;
         int splits;
 #endif
-        uint* primitiveIndices;
 
-        int bvhDepth;
+        int bvhDepth = 1;
+        float overlap = 0.0f;
 
         ObjectMaterial* red;
         ObjectMaterial* green;
