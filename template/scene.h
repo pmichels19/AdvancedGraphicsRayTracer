@@ -59,30 +59,34 @@ namespace Tmpl8 {
             // -----------------------------------------------------------
             // Basic primitives for a simple scene
             // -----------------------------------------------------------
-            //mat4 M1 = mat4::Translate( float3( 0.0f, 2.0f, 0.0f ) );
+            mat4 M1 = mat4::Translate( float3( 0.0f, 2.0f, 0.0f ) );
             //primitives.push_back( Primitive::createQuad( primitiveCount, 2, lamp, M1 ) );
-            //primitives.push_back( Primitive::createSphere( primitiveCount, float3( 0 ), 0.5f, earth ) );
-            //primitives.push_back( Primitive::createCube( primitiveCount, float3( 0.0f ), float3( 1.15f ), diamond ) );
-            //primitives.push_back( Primitive::createQuad( primitiveCount, 50, checkerboard, mat4::Translate( float3( 0.0f, -1.0f, 0.0f ) ) ) );
             // Following two triangles show the difference in SBVH and BVH very clearly
             //primitives.push_back( Primitive::createTriangle( primitiveCount, float3( -5, 2, 2 ), float3( -3, 0, 2 ), float3( 3, 8, 2 ), red ) );
             //primitives.push_back( Primitive::createTriangle( primitiveCount, float3( 5, 6, 2 ), float3( -3, 0, 2 ), float3( 3, 8, 2 ), blue ) );
 
             // -----------------------------------------------------------
-            // US Airways 727 model, the wings greatly highlight the difference between the SBVH and BVH
+            // BVH Visualization - 2 plane scene
             // -----------------------------------------------------------
-            float planeSize = 5.0f;
-            mat4 planeScale = mat4::Scale( planeSize / 2822.548584f );
-            mat4 planeTransform = mat4::Translate( float3( 0.5f + planeSize, 0.0f, 3.0f ) ) * planeScale;
-            LoadModel( "assets/airways.obj", primitiveCount, new Dielectric( float3( 0.7f, 0.7f, 0.7f ), 1.52f ), planeTransform );
+            //float planeSize = 5.0f;
+            //mat4 planeScale = mat4::Scale( planeSize / 2822.548584f );
+            //mat4 planeTransform = mat4::Translate( float3( 0.5f + planeSize, 0.0f, 3.0f ) ) * planeScale;
+            //LoadModel( "assets/airways.obj", primitiveCount, new Dielectric( float3( 0.7f, 0.7f, 0.7f ), 1.52f ), planeTransform );
             
-            planeTransform = mat4::Translate( float3( -0.5f, 0.0f, 3.0f ) ) * mat4::RotateX( -0.5f * PI ) * planeScale;
-            LoadModel( "assets/airways.obj", primitiveCount, red, planeTransform );
+            //planeTransform = mat4::Translate( float3( -0.5f, 0.0f, 3.0f ) ) * mat4::RotateX( -0.5f * PI ) * planeScale;
+            //LoadModel( "assets/airways.obj", primitiveCount, red, planeTransform );
 
             // -----------------------------------------------------------
-            // Some clouds to decorate the scene
+            // A scene with some clouds, a sun and some planes
             // -----------------------------------------------------------
-            //LoadModel( "assets/cloud.obj", primitiveCount, white );
+            primitives.push_back( Primitive::createSphere( primitiveCount, float3( 0.0f, 6.0f, 5.0f ), 0.5f, lamp ) );
+            LoadModel( "assets/cloud.obj", primitiveCount, white );
+            // US Airways 727
+            mat4 airwaysTransform = mat4::Translate( float3( 0.0f, 1.0f, 1.0f ) ) * mat4::RotateZ( 0.1f * PI ) * mat4::RotateY( -0.2f * PI ) * mat4::RotateX( -0.1f * PI ) * mat4::Scale( 1.0f / 2822.548584f );
+            LoadModel( "assets/airways.obj", primitiveCount, new Dielectric( float3( 10.0f, 4.5f, 1.0f ), 1.31f ), airwaysTransform);
+            // Small glider
+            mat4 gliderTransform = mat4::Translate( float3( 1.0f, 0.0f, 0.0f ) ) * mat4::RotateZ( -0.15f * PI ) * mat4::RotateY( 0.05f * PI ) * mat4::RotateX( -0.55f * PI) * mat4::Scale(0.025f);
+            LoadModel( "assets/glider.obj", primitiveCount, red, gliderTransform );
 
             //SetTime( 0 );
 
