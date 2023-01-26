@@ -87,6 +87,12 @@ namespace Tmpl8 {
             // Small glider
             mat4 gliderTransform = mat4::Translate( float3( 1.0f, 0.0f, 0.0f ) ) * mat4::RotateZ( -0.15f * PI ) * mat4::RotateY( 0.05f * PI ) * mat4::RotateX( -0.55f * PI) * mat4::Scale(0.025f);
             LoadModel( "assets/glider.obj", primitiveCount, red, gliderTransform );
+            // small hobby plane
+            mat4 piperTransform = mat4::Translate( float3( -0.05f, -0.06f, -1.05f ) ) * mat4::RotateZ( -0.05f * PI ) * mat4::RotateY( -0.1f * PI ) * mat4::Scale( 0.05f );
+            LoadModel( "assets/piper_pa18.obj", primitiveCount, new Mirror( float3( 0.9f, 0.75f, 0.0f ) ), piperTransform );
+            // and finally a fighter jet
+            mat4 migTransform = mat4::Translate( float3( 0.1f, 0.2f, -0.2f ) ) * mat4::RotateZ( 1.1f * PI ) * mat4::RotateY( 0.05f * PI ) * mat4::RotateX( 0.2f * PI ) * mat4::Scale( 0.001f );
+            LoadModel( "assets/mig29.obj", primitiveCount, green, migTransform );
 
             //SetTime( 0 );
 
@@ -98,6 +104,7 @@ namespace Tmpl8 {
 
             splits = 0;
             primitiveMap[rootNodeIdx] = indices;
+            // no real prediction on how many nodes there will be, so just reserve a lot of space
             bvhNode = (BVHNode*) MALLOC64( ( 4 * primitiveCount ) * sizeof( BVHNode ) );
             BuildSBVH();
             BuildPrimitiveIndices();
