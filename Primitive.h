@@ -23,6 +23,7 @@ class Primitive {
 public:
     float3 centroid;
     vector<float3> data;
+    vector<float2> texCoords;
 
     mat4 Transform;
     mat4 InvertedTransform;
@@ -34,19 +35,22 @@ public:
     ObjectMaterial* material;
 
     Primitive() = default;
-    Primitive( vector<float3> data, PrimitiveType type, uint& idx, ObjectMaterial* material, mat4 Transform = mat4::Identity() ): 
-        data( data ), type( type ), objIdx( idx++ ), material( material ), Transform(Transform) {
+    Primitive(vector<float3> data, PrimitiveType type, uint& idx, ObjectMaterial* material, mat4 Transform = mat4::Identity()) :
+        Primitive(data, vector<float2>{}, type, idx, material, Transform) {}
+
+    Primitive(vector<float3> data, vector<float2> texCoords, PrimitiveType type, uint& idx, ObjectMaterial* material, mat4 Transform = mat4::Identity()) :
+        data(data), texCoords( texCoords ), type(type), objIdx(idx++), material(material), Transform(Transform) {
         // get the inverted transformation matrix
         InvertedTransform = Transform.FastInvertedTransformNoScale();
         // set the centroid
-        centroid = float3( 0 );
-        switch ( type ) {
-            case PLANE:
-                centroid = -data[0] * data[1].x; // TODO
-                break;
-            case TRIANGLE:
-                centroid = ( data[0] + data[1] + data[2] ) / 3.0f;
-                break;
+        centroid = float3(0);
+        switch (type) {
+        case PLANE:
+            centroid = -data[0] * data[1].x; // TODO
+            break;
+        case TRIANGLE:
+            centroid = (data[0] + data[1] + data[2]) / 3.0f;
+            break;
         }
     }
 
@@ -270,8 +274,8 @@ public:
             if ( t < ray.t && t > EPS ) {
                 ray.t = t;
                 ray.objIdx = objIdx;
-                ray.u = u;
-                ray.v = v;
+                ray.u = texCoords[0].x + u * texCoords[1].x + v * texCoords[2].x;
+                ray.v = texCoords[0].y + u * texCoords[1].y + v * texCoords[2].y;
             }
         } else {
             printf( "Impossible primitive type given!\tintersect\n" ); // maybe we should crash here...
@@ -740,11 +744,15 @@ public:
     }
 
     static Primitive createTriangle( uint& objIdx, float3 v0, float3 v1, float3 v2, ObjectMaterial* material ) {
-        vector<float3> triangleData;
-        triangleData.push_back( float3( v0 ) );
-        triangleData.push_back( float3( v1 ) );
-        triangleData.push_back( float3( v2 ) );
+        vector<float3> triangleData{ v0, v1, v2 };
+        vector<float2> textureCoordinates{ float2( 0, 0 ), float2( 1, 1 ), float2( 1, 1 ) };
         return Primitive( triangleData, TRIANGLE, objIdx, material );
+    }
+
+    static Primitive createTexturedTriangle(uint& objIdx, float3 v0, float3 v1, float3 v2, float2 vt0, float2 vt1, float2 vt2, TextureMaterial* material) {
+        vector<float3> triangleData{ v0, v1, v2 };
+        vector<float2> textureCoordinates{ vt0, vt1, vt2 };
+        return Primitive(triangleData, textureCoordinates, TRIANGLE, objIdx, material);
     }
 
     // -----------------------------------------------------------

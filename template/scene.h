@@ -153,6 +153,69 @@ namespace Tmpl8 {
             return max( lDepth, rDepth ) + 1;
         }
 
+        void LoadTexturedModel(const string fileName, uint& objIdx, mat4 transform = mat4::Identity()) {
+            tinyobj::attrib_t attrib;
+            vector<tinyobj::shape_t> shapes;
+            vector<tinyobj::material_t> materials;
+            string warn;
+            string err;
+            bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, fileName.c_str());
+
+            // we get some warnings for mtls not being found, we don't use those anyway atm so ignore those
+            //if ( !warn.empty() ) printf( "Model loader warning: %s\n", warn.c_str() );
+            if (!err.empty()) printf("Model loader error: %s\n", err.c_str());
+            if (!ret) {
+                printf("Failed to load/parse %s.\n", fileName.c_str());
+                return;
+            }
+
+            // convert the tinyobj materials to materials usable in the ray tracer
+            vector<ObjectMaterial*> objectMaterials( materials.size() );
+            for ( tinyobj::material_t mat : materials ) {
+                float3 diff( mat.diffuse[0], mat.diffuse[1], mat.diffuse[2] );
+                float3 spec( mat.specular[0], mat.specular[1], mat.specular[2] );
+
+                string texture = mat.diffuse_texname;
+            }
+
+            // Loop over shapes
+            for (size_t s = 0; s < shapes.size(); s++) {
+                // Loop over faces(polygon)
+                size_t index_offset = 0;
+                for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+                    size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
+
+                    vector<float3> triV;
+                    int material_id = shapes[s].mesh.material_ids[f];
+                    // Loop over vertices in the face.
+                    for (size_t v = 0; v < fv; v++) {
+                        // access to vertex
+                        tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+
+                        tinyobj::real_t vx = attrib.vertices[3 * size_t( idx.vertex_index ) + 0];
+                        tinyobj::real_t vy = attrib.vertices[3 * size_t( idx.vertex_index ) + 1];
+                        tinyobj::real_t vz = attrib.vertices[3 * size_t( idx.vertex_index ) + 2];
+
+                        // Check if `texcoord_index` is zero or positive. negative = no texcoord data
+                        if (idx.texcoord_index >= 0) {
+                            tinyobj::real_t tx = attrib.texcoords[2 * size_t( idx.texcoord_index ) + 0];
+                            tinyobj::real_t ty = attrib.texcoords[2 * size_t( idx.texcoord_index ) + 1];
+                        }
+
+                        triV.push_back( TransformPosition( float3( vx, vy, vz ), transform ) );
+                        if (triV.size() == 3) {
+                            primitives.push_back( Primitive::createTriangle( objIdx, triV[0], triV[1], triV[2], material ) );
+                            triV.erase( triV.begin() );
+                        }
+                    }
+
+                    index_offset += fv;
+                }
+            }
+
+            printf("Finished reading %s!\n", fileName.c_str());
+        }
+
         void LoadModel( const string fileName, uint& objIdx, ObjectMaterial* material, mat4 transform = mat4::Identity() ) {
             tinyobj::attrib_t attrib;
             vector<tinyobj::shape_t> shapes;
