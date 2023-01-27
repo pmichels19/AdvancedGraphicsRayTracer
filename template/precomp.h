@@ -1659,7 +1659,7 @@ public:
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
-//#define BVH_ANALYSIS
+#define BVH_ANALYSIS
 
 // STUFF FOR SBVH
 #define SPATIAL_SPLITS

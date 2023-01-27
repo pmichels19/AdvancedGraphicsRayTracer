@@ -746,12 +746,12 @@ public:
     static Primitive createTriangle( uint& objIdx, float3 v0, float3 v1, float3 v2, ObjectMaterial* material ) {
         vector<float3> triangleData{ v0, v1, v2 };
         vector<float2> textureCoordinates{ float2( 0, 0 ), float2( 1, 1 ), float2( 1, 1 ) };
-        return Primitive( triangleData, TRIANGLE, objIdx, material );
+        return Primitive( triangleData, textureCoordinates, TRIANGLE, objIdx, material );
     }
 
     static Primitive createTexturedTriangle(uint& objIdx, float3 v0, float3 v1, float3 v2, float2 vt0, float2 vt1, float2 vt2, TextureMaterial* material) {
         vector<float3> triangleData{ v0, v1, v2 };
-        vector<float2> textureCoordinates{ vt0, vt1, vt2 };
+        vector<float2> textureCoordinates{ vt0, vt1 - vt0, vt2 - vt0 };
         return Primitive(triangleData, textureCoordinates, TRIANGLE, objIdx, material);
     }
 

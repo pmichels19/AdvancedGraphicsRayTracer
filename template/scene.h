@@ -57,44 +57,27 @@ namespace Tmpl8 {
             earth = new TextureMaterial( "assets/earth.png" );
 
             // -----------------------------------------------------------
-            // Basic primitives for a simple scene
-            // -----------------------------------------------------------
-            mat4 M1 = mat4::Translate( float3( 0.0f, 2.0f, 0.0f ) );
-            //primitives.push_back( Primitive::createQuad( primitiveCount, 2, lamp, M1 ) );
             // Following two triangles show the difference in SBVH and BVH very clearly
-            //primitives.push_back( Primitive::createTriangle( primitiveCount, float3( -5, 2, 2 ), float3( -3, 0, 2 ), float3( 3, 8, 2 ), red ) );
-            //primitives.push_back( Primitive::createTriangle( primitiveCount, float3( 5, 6, 2 ), float3( -3, 0, 2 ), float3( 3, 8, 2 ), blue ) );
+            // -----------------------------------------------------------
+            primitives.push_back( Primitive::createTriangle( primitiveCount, float3( -5, -2, 3 ), float3( -3, -4, 3 ), float3( 3, 4, 3 ), red ) );
+            primitives.push_back( Primitive::createTriangle( primitiveCount, float3( 5, 2, 3 ), float3( -3, -4, 3 ), float3( 3, 4, 3 ), blue ) );
 
             // -----------------------------------------------------------
-            // BVH Visualization - 2 plane scene
+            // BVH Visualization - 2 plane scene - ~500K triangles
             // -----------------------------------------------------------
             //float planeSize = 5.0f;
             //mat4 planeScale = mat4::Scale( planeSize / 2822.548584f );
             //mat4 planeTransform = mat4::Translate( float3( 0.5f + planeSize, 0.0f, 3.0f ) ) * planeScale;
-            //LoadModel( "assets/airways.obj", primitiveCount, new Dielectric( float3( 0.7f, 0.7f, 0.7f ), 1.52f ), planeTransform );
+            //LoadModel( "assets/airways.obj", primitiveCount, blue, planeTransform );
             
             //planeTransform = mat4::Translate( float3( -0.5f, 0.0f, 3.0f ) ) * mat4::RotateX( -0.5f * PI ) * planeScale;
             //LoadModel( "assets/airways.obj", primitiveCount, red, planeTransform );
 
             // -----------------------------------------------------------
-            // A scene with some clouds, a sun and some planes
+            // A scene with a big plane - 161K triangles
             // -----------------------------------------------------------
-            primitives.push_back( Primitive::createSphere( primitiveCount, float3( 0.0f, 6.0f, 5.0f ), 0.5f, lamp ) );
-            LoadModel( "assets/cloud.obj", primitiveCount, white );
-            // US Airways 727
-            mat4 airwaysTransform = mat4::Translate( float3( 0.0f, 1.0f, 1.0f ) ) * mat4::RotateZ( 0.1f * PI ) * mat4::RotateY( -0.2f * PI ) * mat4::RotateX( -0.1f * PI ) * mat4::Scale( 1.0f / 2822.548584f );
-            LoadModel( "assets/airways.obj", primitiveCount, new Dielectric( float3( 10.0f, 4.5f, 1.0f ), 1.31f ), airwaysTransform);
-            // Small glider
-            mat4 gliderTransform = mat4::Translate( float3( 1.0f, 0.0f, 0.0f ) ) * mat4::RotateZ( -0.15f * PI ) * mat4::RotateY( 0.05f * PI ) * mat4::RotateX( -0.55f * PI) * mat4::Scale(0.025f);
-            LoadModel( "assets/glider.obj", primitiveCount, red, gliderTransform );
-            // small hobby plane
-            mat4 piperTransform = mat4::Translate( float3( -0.05f, -0.06f, -1.05f ) ) * mat4::RotateZ( -0.05f * PI ) * mat4::RotateY( -0.1f * PI ) * mat4::Scale( 0.05f );
-            LoadModel( "assets/piper_pa18.obj", primitiveCount, new Mirror( float3( 0.9f, 0.75f, 0.0f ) ), piperTransform );
-            // and finally a fighter jet
-            mat4 migTransform = mat4::Translate( float3( 0.1f, 0.2f, -0.2f ) ) * mat4::RotateZ( 1.1f * PI ) * mat4::RotateY( 0.05f * PI ) * mat4::RotateX( 0.2f * PI ) * mat4::Scale( 0.001f );
-            LoadModel( "assets/mig29.obj", primitiveCount, green, migTransform );
-
-            //SetTime( 0 );
+            //mat4 airplaneTransform = mat4::Translate( float3( 1.0f, 1.0f, 5.0f ) ) * mat4::RotateZ( 0.1f * PI ) * mat4::RotateX( -0.6f * PI ) * mat4::Scale( 0.005f );
+            //LoadTexturedModel( "assets/airplane/airplane.obj", primitiveCount, airplaneTransform );
 
             // build BVH after objects are moved with setTime
             printf("Building BVH...\n");
@@ -153,42 +136,39 @@ namespace Tmpl8 {
             return max( lDepth, rDepth ) + 1;
         }
 
-        void LoadTexturedModel(const string fileName, uint& objIdx, mat4 transform = mat4::Identity()) {
+        void LoadTexturedModel( const string fileName, uint& objIdx, mat4 transform = mat4::Identity() ) {
             tinyobj::attrib_t attrib;
             vector<tinyobj::shape_t> shapes;
             vector<tinyobj::material_t> materials;
             string warn;
             string err;
-            bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, fileName.c_str());
+            bool ret = tinyobj::LoadObj( &attrib, &shapes, &materials, &warn, &err, fileName.c_str() );
 
             // we get some warnings for mtls not being found, we don't use those anyway atm so ignore those
             //if ( !warn.empty() ) printf( "Model loader warning: %s\n", warn.c_str() );
-            if (!err.empty()) printf("Model loader error: %s\n", err.c_str());
-            if (!ret) {
-                printf("Failed to load/parse %s.\n", fileName.c_str());
+            if ( !err.empty() ) printf( "Model loader error: %s\n", err.c_str() );
+            if ( !ret ) {
+                printf( "Failed to load/parse %s.\n", fileName.c_str() );
                 return;
             }
 
-            // convert the tinyobj materials to materials usable in the ray tracer
-            vector<ObjectMaterial*> objectMaterials( materials.size() );
+            int base_id = modelMaterials.size();
             for ( tinyobj::material_t mat : materials ) {
-                float3 diff( mat.diffuse[0], mat.diffuse[1], mat.diffuse[2] );
-                float3 spec( mat.specular[0], mat.specular[1], mat.specular[2] );
-
-                string texture = mat.diffuse_texname;
+                modelMaterials.push_back( new TextureMaterial( mat.diffuse_texname.c_str() ) );
             }
 
             // Loop over shapes
-            for (size_t s = 0; s < shapes.size(); s++) {
+            for ( size_t s = 0; s < shapes.size(); s++ ) {
                 // Loop over faces(polygon)
                 size_t index_offset = 0;
-                for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
-                    size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
+                for ( size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++ ) {
+                    size_t fv = size_t( shapes[s].mesh.num_face_vertices[f] );
 
                     vector<float3> triV;
-                    int material_id = shapes[s].mesh.material_ids[f];
+                    vector<float2> triVt;
+                    int material_id = base_id + shapes[s].mesh.material_ids[f];
                     // Loop over vertices in the face.
-                    for (size_t v = 0; v < fv; v++) {
+                    for ( size_t v = 0; v < fv; v++ ) {
                         // access to vertex
                         tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
 
@@ -197,15 +177,17 @@ namespace Tmpl8 {
                         tinyobj::real_t vz = attrib.vertices[3 * size_t( idx.vertex_index ) + 2];
 
                         // Check if `texcoord_index` is zero or positive. negative = no texcoord data
-                        if (idx.texcoord_index >= 0) {
+                        if ( idx.texcoord_index >= 0 ) {
                             tinyobj::real_t tx = attrib.texcoords[2 * size_t( idx.texcoord_index ) + 0];
                             tinyobj::real_t ty = attrib.texcoords[2 * size_t( idx.texcoord_index ) + 1];
+                            triVt.push_back( float2( tx, 1.0f - ty ) );
                         }
 
                         triV.push_back( TransformPosition( float3( vx, vy, vz ), transform ) );
-                        if (triV.size() == 3) {
-                            primitives.push_back( Primitive::createTriangle( objIdx, triV[0], triV[1], triV[2], material ) );
+                        if ( triV.size() == 3 ) {
+                            primitives.push_back( Primitive::createTexturedTriangle( objIdx, triV[0], triV[1], triV[2], triVt[0], triVt[1], triVt[2], modelMaterials[material_id] ));
                             triV.erase( triV.begin() );
+                            triVt.erase( triVt.begin() );
                         }
                     }
 
@@ -213,7 +195,7 @@ namespace Tmpl8 {
                 }
             }
 
-            printf("Finished reading %s!\n", fileName.c_str());
+            printf( "Finished reading %s!\n", fileName.c_str() );
         }
 
         void LoadModel( const string fileName, uint& objIdx, ObjectMaterial* material, mat4 transform = mat4::Identity() ) {
@@ -1053,6 +1035,8 @@ namespace Tmpl8 {
 
         int bvhDepth = 1;
         float overlap = 0.0f;
+
+        vector<TextureMaterial*> modelMaterials;
 
         ObjectMaterial* red;
         ObjectMaterial* green;
