@@ -95,7 +95,7 @@ namespace Tmpl8 {
             primitiveIndices = (uint*) MALLOC64( primitiveCount * sizeof( uint ) );
             for ( uint i = 0; i < primitiveCount; i++ ) primitiveIndices[i] = i;
 
-            bvhNode = (BVHNode*) MALLOC64( ( 2 * primitiveCount + 1 ) * sizeof( BVHNode ) );
+            bvhNode = (BVHNode*) MALLOC64( ( 2 * primitiveCount ) * sizeof( BVHNode ) );
             BuildBVH();
 #endif
             printf( "Finished BVH!\n" );
